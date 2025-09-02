@@ -32,10 +32,10 @@ function addResult(results, status, message, region, resource, custom) {
         } else if (message.indexOf('No registered resource provider found') > -1) {
             overrideMsg = 'Azure does not support this check in this location.';
         } else if (message.indexOf('using Storage Account SAS') > -1) {
-            overrideMsg = 'Aqua does not have permission to list storage account keys. For help fixing this error, see: https://bit.ly/2AhlVP0';
+            overrideMsg = 'AccuKnox does not have permission to list storage account keys. For help fixing this error, see: https://learn.microsoft.com/en-us/azure/storage/common/storage-account-keys-manage';
             skipStatusChange = true;
         } else if (message.indexOf('list permission on key vault') > -1) {
-            overrideMsg = 'Aqua does not have permission to list objects in this Key Vault. For help fixing this error, see: https://bit.ly/3cbpFyL';
+            overrideMsg = 'AccuKnox does not have permission to list objects in this Key Vault. For help fixing this error, see: https://learn.microsoft.com/en-us/azure/key-vault/general/rbac-guide';
             skipStatusChange = true;
         }
 
