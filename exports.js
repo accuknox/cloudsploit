@@ -1128,6 +1128,7 @@ module.exports = {
 
         'recoveryVaultByokEncrypted'    : require(__dirname + '/plugins/azure/recoveryService/recoveryVaultByokEncrypted.js'),
         'recoveryVaultLoggingEnabled'   : require(__dirname + '/plugins/azure/recoveryService/recoveryVaultLoggingEnabled.js'),
+        'recoveryVaultPrivateEndpoint'  : require(__dirname + '/plugins/azure/recoveryService/recoveryVaultPrivateEndpoint.js'),
 
         'domainPublicAccessEnabled'     : require(__dirname + '/plugins/azure/eventGrid/domainPublicAccess.js'),
         'domainMinimumTlsVersion'       : require(__dirname + '/plugins/azure/eventGrid/domainMinimumTlsVersion.js'),

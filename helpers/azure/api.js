@@ -601,7 +601,7 @@ var postcalls = {
         getRecoveryServiceVault: {
             reliesOnPath: 'recoveryServiceVaults.listBySubscriptionId',
             properties: ['id'],
-            url: 'https://management.azure.com/{id}?api-version=2022-04-01'
+            url: 'https://management.azure.com/{id}?api-version=2024-04-01'
         }
     },
     webhooks: {
