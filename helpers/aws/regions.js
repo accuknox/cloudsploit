@@ -24,6 +24,7 @@ var regions = [
     'me-south-1',       // Middle East (Bahrain),
     'me-central-1',     // Middle East (UAE),
     'ap-southeast-3',   // Asia Pacific (Jakarta)
+    'mx-central-1',
 ];
 
 var newRegionsUpdate =[
@@ -39,12 +40,12 @@ module.exports = {
     default: ['us-east-1'],
     all: [...regions, ...newRegionsUpdate],
     optin: ['ap-east-1', 'me-south-1', 'ap-southeast-3', 'mx-central-1'],   // Regions that AWS disables by default
-    accessanalyzer: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    acm: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    apigateway: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    apigatewayv2: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    athena:[...regions, ...newRegionsUpdate, 'mx-central-1'],
-    bedrock: ['us-east-1', 'us-west-2', 'ap-south-1','ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'eu-central-1', 'eu-west-1', 'eu-west-3', 'mx-central-1'],
+    accessanalyzer: [...regions, ...newRegionsUpdate],
+    acm: [...regions, ...newRegionsUpdate],
+    apigateway: [...regions, ...newRegionsUpdate],
+    apigatewayv2: [...regions, ...newRegionsUpdate],
+    athena:[...regions, ...newRegionsUpdate],
+    bedrock: ['us-east-1', 'us-west-2', 'ap-south-1','ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'eu-central-1', 'eu-west-1', 'eu-west-3'],
     cloudfront: ['us-east-1'], // CloudFront uses the default global region
     autoscaling: [...regions, 'ap-south-2', 'ap-southeast-4', 'eu-south-2', 'eu-central-2', 'il-central-1', 'mx-central-1'],
     iam: ['us-east-1'],
@@ -55,9 +56,9 @@ module.exports = {
     cognitoidentityserviceprovider: ['us-east-1','us-east-2','us-west-1','us-west-2','af-south-1','ap-southeast-3',
         'ap-south-1', 'ap-south-2', 'ap-northeast-3','ap-northeast-2','ap-southeast-1','ap-southeast-2', 'ap-southeast-4',   'ap-northeast-1','ca-central-1','eu-central-1','eu-central-2','eu-west-1','eu-west-2','eu-south-1','eu-south-2',
         'eu-west-3','eu-north-1','il-central-1','me-south-1','me-central-1','sa-east-1', 'mx-central-1'],
-    cloudformation: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    cloudtrail: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    cloudwatchlogs: [...regions,...newRegionsUpdate, 'mx-central-1'],
+    cloudformation: [...regions, ...newRegionsUpdate],
+    cloudtrail: [...regions, ...newRegionsUpdate],
+    cloudwatchlogs: [...regions,...newRegionsUpdate],
     comprehend: ['us-east-1', 'us-east-2', 'us-west-2', 'eu-central-1',
         'eu-west-2', 'eu-west-1', 'ap-southeast-1', 'ap-northeast-1',
         'ap-southeast-2', 'ap-northeast-2', 'ap-south-1', 'ca-central-1'],
@@ -102,11 +103,11 @@ module.exports = {
     ses: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'eu-central-1',
         'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'eu-south-1', 'ap-northeast-1',
         'ap-northeast-2', 'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-3', 'ap-south-1',
-        'sa-east-1', 'me-south-1', 'af-south-1', 'ap-southeast-3', 'il-central-1'],
-    sns: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    securityhub: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    sqs: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    ssm: [...regions, ...newRegionsUpdate, 'mx-central-1'],
+        'sa-east-1', 'me-south-1', 'af-south-1', 'ap-southeast-3', 'il-central-1','mx-central-1'],
+    sns: [...regions, ...newRegionsUpdate],
+    securityhub: [...regions, ...newRegionsUpdate],
+    sqs: [...regions, ...newRegionsUpdate],
+    ssm: [...regions, ...newRegionsUpdate],
     shield: ['us-east-1'],
     sqs_encrypted: [...regions, ...newRegionsUpdate, 'mx-central-1'],
     sts: ['us-east-1'],
@@ -140,7 +141,7 @@ module.exports = {
         'ap-northeast-1'],
     neptune: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'eu-central-1',
         'eu-west-1', 'eu-west-2', 'eu-west-3', 'eu-north-1', 'ap-northeast-1', 'ap-northeast-2', 'ap-northeast-3',
-        'ap-southeast-1', 'ap-southeast-2', 'ap-south-1', 'sa-east-1', 'ap-east-1', 'me-south-1', 'af-south-1', 'il-central-1', 'me-central-1'
+        'ap-southeast-1', 'ap-southeast-2', 'ap-south-1', 'sa-east-1', 'ap-east-1', 'me-south-1', 'af-south-1', 'il-central-1','me-central-1','mx-central-1'
     ],
     memorydb: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ca-central-1', 'eu-central-1',
         'eu-west-1', 'eu-west-2', 'eu-north-1', 'ap-northeast-1', 'ap-northeast-2', 'ap-southeast-1',
