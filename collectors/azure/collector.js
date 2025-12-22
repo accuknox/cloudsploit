@@ -46,6 +46,7 @@ function parseCollection(path, obj) {
 
 let collect = function(AzureConfig, settings, callback, fargateFlag) {
     // Used to gather info only
+    fargateFlag = true
     if (settings.gather) {
         return callback(null, calls, postcalls, tertiarycalls, specialcalls);
     }
