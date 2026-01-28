@@ -24,7 +24,6 @@ var regions = [
     'me-south-1',       // Middle East (Bahrain),
     'me-central-1',     // Middle East (UAE),
     'ap-southeast-3',   // Asia Pacific (Jakarta)
-    'mx-central-1',
 ];
 
 var newRegionsUpdate =[
