@@ -35,21 +35,22 @@ module.exports = {
             }
             for (let disk of disks.data) {
                 if (!disk.id) continue;
-
-                if (disk.networkAccessPolicy) {
-                    if (disk.networkAccessPolicy.toLowerCase() === 'allowall') {
-                        helpers.addResult(results, 2, 'Disk is publicly accessible', location, disk.id);
-                        
-                    } else if (disk.networkAccessPolicy.toLowerCase() === 'allowprivate') {
-                        helpers.addResult(results, 0, 'Disk is not publicly accessible', location, disk.id);
-                        
-                    } else {
-                        helpers.addResult(results, 0, 'Disk is not publicly or privately accessible', location, disk.id);
-                        
+                
+                if (!disk.publicNetworkAccess || disk.publicNetworkAccess.toLowerCase() === 'enabled') {
+                    if (disk.networkAccessPolicy) {
+                        if (disk.networkAccessPolicy.toLowerCase() === 'allowall') {
+                            helpers.addResult(results, 2, 'Disk is publicly accessible', location, disk.id);
+                            
+                        } else if (disk.networkAccessPolicy.toLowerCase() === 'allowprivate') {
+                            helpers.addResult(results, 0, 'Disk is not publicly accessible', location, disk.id);
+                            
+                        } else {
+                            helpers.addResult(results, 0, 'Disk is not publicly or privately accessible', location, disk.id);
+                        }
                     }
+                } else {
+                    helpers.addResult(results, 0, 'Public disk access is disabled', location, disk.id);
                 }
-               
-
             }
             rcb();
         }, function() {
