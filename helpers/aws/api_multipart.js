@@ -573,14 +573,6 @@ var calls = [
                 paginate: 'NextToken'
             }
         },
-        ElasticTranscoder: {
-            // TODO: Pagination via NextPageToken and PageToken
-            listPipelines: {
-                property: 'Pipelines',
-                paginate: 'NextPageToken',
-                paginateReqProp: 'PageToken'
-            }
-        },
         ELB: {
             describeLoadBalancers: {
                 property: 'LoadBalancerDescriptions',
@@ -860,12 +852,6 @@ var calls = [
             listEnvironmentTemplates: {
                 property: 'templates',
                 paginate: 'nextToken'
-            }
-        },
-        QLDB: {
-            listLedgers: {
-                property: 'Ledgers',
-                paginate: 'NextToken'
             }
         },
         RDS: {
@@ -1444,6 +1430,12 @@ var postcalls = [
                 filterKey: 'ResourceName',
                 filterValue: 'DBClusterArn'
             },
+            describeDBClusterParameters: {
+                reliesOnService: 'docdb',
+                reliesOnCall: 'describeDBClusters',
+                filterKey: 'DBClusterParameterGroupName',
+                filterValue: 'DBClusterParameterGroup'
+            },
         },
         DynamoDB: {
             describeTable: {
@@ -1664,14 +1656,6 @@ var postcalls = [
                 reliesOnService: 'ecs',
                 reliesOnCall: 'listClusters',
                 override: true
-            }
-        },
-        ElasticTranscoder: {
-            listJobsByPipeline:  {
-                reliesOnService: 'elastictranscoder',
-                reliesOnCall: 'listPipelines',
-                filterKey: 'PipelineId',
-                filterValue: 'Id'
             }
         },
         ELB: {
@@ -2018,7 +2002,7 @@ var postcalls = [
                 reliesOnCall: 'listFunctions',
                 filterKey: 'FunctionName',
                 filterValue: 'FunctionName',
-                rateLimit: 500, // it's not documented but experimentally 10/second works.
+                rateLimit: 500, // it's not documented but experimental 10/second works.
             },
             getFunction: {
                 reliesOnService: 'lambda',
@@ -2090,14 +2074,6 @@ var postcalls = [
                 reliesOnCall: 'listBots',
                 filterKey: 'botId',
                 filterValue: 'botId'
-            }
-        },
-        QLDB: {
-            describeLedger: {
-                reliesOnService: 'qldb',
-                reliesOnCall: 'listLedgers',
-                filterKey: 'Name',
-                filterValue: 'Name'
             }
         },
         ManagedBlockchain: {

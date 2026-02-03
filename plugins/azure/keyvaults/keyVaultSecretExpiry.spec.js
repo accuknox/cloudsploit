@@ -20,7 +20,9 @@ const listKeyVaults = [
         "sku": {
             "family": "A",
             "name": "Standard"
-        }
+        },
+        "enableRbacAuthorization": true,
+
     },
     {
         "id": "/subscriptions/abcdef123-ebf6-437f-a3b0-28fc0d22117e/resourceGroups/Default-ActivityLogAlerts/providers/Microsoft.KeyVault/vaults/testvault",
@@ -31,7 +33,8 @@ const listKeyVaults = [
         "sku": {
             "family": "A",
             "name": "Standard"
-        }
+        },
+        "enableRbacAuthorization": false,
     }
 ];
 
@@ -152,11 +155,11 @@ describe('keyVaultSecretExpiry', function() {
             auth.run(createCache(null, [], {}), {}, callback);
         });
 
-        it('should give passing result if secret expiration is not enabled', function(done) {
+        it('should give passing result if secret expiration is not enabled in RBAC vault', function(done) {
             const callback = (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(0);
-                expect(results[0].message).to.include('Secret expiration is not enabled');
+                expect(results[0].message).to.include('Secret expiration is not enabled in RBAC vault');
                 expect(results[0].region).to.equal('eastus');
                 done()
             };
@@ -164,11 +167,11 @@ describe('keyVaultSecretExpiry', function() {
             auth.run(createCache(null, [listKeyVaults[0]], getSecrets[0]), {}, callback);
         });
 
-        it('should give passing result if secret expiry is not yet reached', function(done) {
+        it('should give passing result if secret expiry is not yet reached in RBAC vault', function(done) {
             const callback = (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(0);
-                expect(results[0].message).to.include('Secret expires');
+                expect(results[0].message).to.include('Secret in RBAC vault expires');
                 expect(results[0].region).to.equal('eastus');
                 done()
             };
@@ -180,7 +183,7 @@ describe('keyVaultSecretExpiry', function() {
             const callback = (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(2);
-                expect(results[0].message).to.include('Secret expired');
+                expect(results[0].message).to.include('Secret in RBAC vault expired');
                 expect(results[0].region).to.equal('eastus');
                 done()
             };
@@ -192,7 +195,7 @@ describe('keyVaultSecretExpiry', function() {
             const callback = (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(2);
-                expect(results[0].message).to.include('Secret expires');
+                expect(results[0].message).to.include('Secret in RBAC vault expires');
                 expect(results[0].region).to.equal('eastus');
                 done()
             };
@@ -204,7 +207,7 @@ describe('keyVaultSecretExpiry', function() {
             const callback = (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(0);
-                expect(results[0].message).to.include('Secret is not enabled');
+                expect(results[0].message).to.include('Secret in RBAC vault is not enabled');
                 expect(results[0].region).to.equal('eastus');
                 done()
             };

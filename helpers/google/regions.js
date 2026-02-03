@@ -104,11 +104,16 @@ module.exports = {
     composer: [
         'us-west1', 'us-west2', 'us-west3', 'us-west4', 'us-central1', 'us-east1', 'us-east4', 'northamerica-northeast1', 'southamerica-east1',
         'europe-west2', 'europe-west1', 'europe-west6', 'europe-west3', 'europe-central2', 'asia-south1', 'asia-southeast1', 'asia-east2', 'asia-northeast1',
-        'asia-northeast2', 'australia-southeast1', 'asia-northeast3'
+        'asia-northeast2', 'australia-southeast1', 'asia-northeast3','asia-east1'
     ],
     instanceGroupManagers: regions,
     functions: [
         'us-east1', 'us-east4', 'us-west1','us-west2', 'us-west3', 'us-west4', 'us-central1', 'northamerica-northeast1', 'southamerica-east1',
+        'europe-west1', 'europe-west2', 'europe-west3', 'europe-west6', 'europe-central2', 'asia-south1', 'asia-southeast1', 'asia-southeast2',
+        'asia-east1', 'asia-east2', 'asia-northeast1', 'asia-northeast2', 'asia-northeast3', 'australia-southeast1'
+    ],
+    functionsv2: [
+        'us-east1', 'us-east4', 'us-west1', 'us-west2', 'us-west3', 'us-west4', 'us-central1', 'northamerica-northeast1', 'southamerica-east1',
         'europe-west1', 'europe-west2', 'europe-west3', 'europe-west6', 'europe-central2', 'asia-south1', 'asia-southeast1', 'asia-southeast2',
         'asia-east1', 'asia-east2', 'asia-northeast1', 'asia-northeast2', 'asia-northeast3', 'australia-southeast1'
     ],
@@ -119,9 +124,11 @@ module.exports = {
     ],
     instanceTemplates: ['global'],
     networks: ['global'],
-    backendServices: ['global'],
+    backendServices: ['global', ...regions],
+    forwardingRules: ['global', ...regions],
     healthChecks: ['global'],
-    targetHttpProxies: ['global'],
+    targetHttpProxies: ['global', ...regions],
+    targetHttpsProxies: ['global', ...regions],
     instanceGroups: ['global'],
     autoscalers: ['global'],
     subnetworks: regions,
@@ -148,13 +155,16 @@ module.exports = {
     memberships: ['global'],
     iam: ['global'],
     deployments: ['global'],
-    urlMaps: ['global'],
+    urlMaps: ['global',...regions],
     apiKeys: ['global'],
     resourceRecordSets: ['global'],
     services: ['global'],
     accessApproval: ['global'],
     networkRoutes: ['global'],
     roles: ['global'],
+    apiGateways: ['global','asia-northeast1', 'australia-southeast1', 'europe-west1', 'europe-west2', 'us-central1', 'us-east1', 'us-east4', 'us-west2', 'us-west3', 'us-west4'],
+    api: ['global','asia-northeast1', 'australia-southeast1', 'europe-west1', 'europe-west2', 'us-central1', 'us-east1', 'us-east4', 'us-west2', 'us-west3', 'us-west4'],
+    apiConfigs: ['global','asia-northeast1', 'australia-southeast1', 'europe-west1', 'europe-west2', 'us-central1', 'us-east1', 'us-east4', 'us-west2', 'us-west3', 'us-west4'],
     vertexAI: ['us-west1', 'us-west2', 'us-west3', 'us-west4', 'us-central1', 'us-east1', 'us-east4', 'us-south1',
         'northamerica-northeast1', 'northamerica-northeast2', 'southamerica-east1', 'southamerica-west1', 'europe-west1',
         'europe-west2', 'europe-west3', 'europe-west4', 'europe-west6', 'europe-west8', 'europe-west9', 'europe-north1', 'europe-central2',

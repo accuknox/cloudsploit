@@ -15,7 +15,7 @@ module.exports = {
         private_cidrs: {
             name: 'EC2 RFC 1918 CIDR Addresses',
             description: 'A comma-separated list of CIDRs that indicates reserved private addresses',
-            regex: '/^(?=.*[^.]$)((25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).?){4}$/',
+            regex: '^(?:(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).?){4}/(?:[0-9]|[1-2][0-9]|3[0-2])(?:,(?:(?:25[0-5]|2[0-4][0-9]|[01]?[0-9][0-9]?).?){4}/(?:[0-9]|[1-2][0-9]|3[0-2]))*)?$',
             default: '10.0.0.0/8,172.16.0.0/12,192.168.0.0/16'
         }
     },
@@ -70,16 +70,15 @@ module.exports = {
                             }
                         }
                     }
-
-                    if (!privateCidrsFound.length) {
-                        helpers.addResult(results, 0,
-                            'Security group "' + group.GroupName + '" is not configured to allow inbound access from any source IP address within any reserved private addresses',
-                            region, resource);
-                    } else {
-                        helpers.addResult(results, 2,
-                            'Security group "' + group.GroupName + '" is configured to allow inbound access from any source IP address within these reserved private addresses: ' + privateCidrsFound.join(', '),
-                            region, resource);
-                    }
+                }
+                if (!privateCidrsFound.length) {
+                    helpers.addResult(results, 0,
+                        'Security group "' + group.GroupName + '" is not configured to allow inbound access from any source IP address within any reserved private addresses',
+                        region, resource);
+                } else {
+                    helpers.addResult(results, 2,
+                        'Security group "' + group.GroupName + '" is configured to allow inbound access from any source IP address within these reserved private addresses: ' + privateCidrsFound.join(', '),
+                        region, resource);
                 }
             }
             rcb();

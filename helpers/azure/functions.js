@@ -775,22 +775,86 @@ function checkSecurityGroup(securityGroups) {
     return {exposed: true};
 }
 
-function checkNetworkExposure(cache, source, networkInterfaces, securityGroups, region, results)  {
+function checkNetworkExposure(cache, source, networkInterfaces, securityGroups, location, results, attachedResources, resource)  {
     let exposedPath = '';
 
-    if (securityGroups && securityGroups.length) {
-        // Scenario 1: check if security group allow all inbound traffic
-        let exposedSG = checkSecurityGroup(securityGroups);
-        if (exposedSG && exposedSG.exposed) {
-            if (exposedSG.nsg) {
-                exposedPath += `nsg ${exposedSG.nsg}`
+    const isFunctionApp = resource && resource.kind &&
+        resource.kind.toLowerCase().includes('functionapp');
+
+    if (!isFunctionApp) {
+        if (securityGroups && securityGroups.length) {
+            // Scenario 1: check if security group allow all inbound traffic
+            let exposedSG = checkSecurityGroup(securityGroups);
+            if (exposedSG && exposedSG.exposed) {
+                if (exposedSG.nsg) {
+                    return `nsg ${exposedSG.nsg}`
+                } else {
+                    return '';
+                }
             }
         }
-
-        return exposedPath
     }
-}
 
+
+    const { applicationGateways, lbNames, frontDoors } = attachedResources;
+
+    if (lbNames && lbNames.length) {
+        const loadBalancers = shared.addSource(cache, source,
+            ['loadBalancers', 'listAll', location]);
+
+        if (loadBalancers && !loadBalancers.err && loadBalancers.data && loadBalancers.data.length) {
+            let resourceLBs = loadBalancers.data.filter(lb => lbNames.includes(lb.id));
+            if (resourceLBs && resourceLBs.length) {
+                for (let lb of resourceLBs) {
+                    let isPublic = false;
+                    if (lb.frontendIPConfigurations && lb.frontendIPConfigurations.length) {
+                        isPublic = lb.frontendIPConfigurations.some(ipConfig => ipConfig.properties
+                            && ipConfig.properties.publicIPAddress && ipConfig.properties.publicIPAddress.id);
+                        if (isPublic && ((lb.inboundNatRules && lb.inboundNatRules.length) || (lb.loadBalancingRules && lb.loadBalancingRules.length))) {
+                            exposedPath += exposedPath.length ? `, lb ${lb.name}` : `lb ${lb.name}`;
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+
+    if (applicationGateways && applicationGateways.length) {
+        for (const ag of applicationGateways) {
+            if (ag.frontendIPConfigurations && ag.frontendIPConfigurations.some(config => config.publicIPAddress && config.publicIPAddress.id)) {
+                exposedPath += exposedPath.length ? `, ag ${ag.name}` : `ag ${ag.name}`;
+            }
+        }
+    }
+
+    if (frontDoors && frontDoors.length) {
+        for (const fd of frontDoors) {
+            if (!fd.associatedWafPolicies || !fd.associatedWafPolicies.length) {
+                exposedPath += exposedPath.length ? `, fd ${fd.name}` : `fd ${fd.name}`;
+                continue;
+            }
+
+            // Check WAF policies
+            let hasSecureWaf = false;
+            for (const policy of fd.associatedWafPolicies) {
+                if (policy.policySettings &&
+                    policy.policySettings.enabledState === 'Enabled' &&
+                    policy.policySettings.mode === 'Prevention') {
+                    hasSecureWaf = true;
+                    break;
+                }
+            }
+
+            if (!hasSecureWaf) {
+                exposedPath += exposedPath.length ? `, fd ${fd.name}` : `fd ${fd.name}`;
+            }
+        }
+    }
+
+
+    return exposedPath;
+}
 module.exports = {
     addResult: addResult,
     findOpenPorts: findOpenPorts,
@@ -803,7 +867,8 @@ module.exports = {
     remediateOpenPorts: remediateOpenPorts,
     remediateOpenPortsHelper: remediateOpenPortsHelper,
     checkMicrosoftDefender: checkMicrosoftDefender,
-    checkFlexibleServerConfigs: checkFlexibleServerConfigs,
-    checkNetworkExposure: checkNetworkExposure,
+    checkFlexibleServerConfigs:checkFlexibleServerConfigs,
+    checkNetworkExposure: checkNetworkExposure
 
 };
+

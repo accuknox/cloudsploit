@@ -190,6 +190,33 @@ var serviceMap = {
             BridgeArnIdentifier: '', BridgeIdTemplate: '{name}', BridgeResourceType: 'models',
             BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'gcp-AI & ML',
             BridgeCollectionService: 'gcp-vertexai', DataIdentifier: 'data',
+        },
+    'CloudBuild':
+        {
+            enabled: true, isSingleSource: true, InvAsset: 'trigger', InvService: 'CloudBuild',
+            InvResourceCategory: 'cloud_resources', InvResourceType: 'trigger', BridgeServiceName: 'cloudbuild',
+            BridgePluginCategoryName: 'gcp-CloudBuild', BridgeProvider: 'Google', BridgeCall: 'triggers',
+            BridgeArnIdentifier: '', BridgeIdTemplate: 'projects/{cloudAccount}/locations/{region}/triggers/{name}', BridgeResourceType: 'triggers',
+            BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'gcp-CloudBuild',
+            BridgeCollectionService: 'gcp-cloudbuild', DataIdentifier: 'data',
+        },
+    'Cloud Composer':
+        {
+            enabled: true, isSingleSource: true, InvAsset: 'environment', InvService: 'Cloud Composer',
+            InvResourceCategory: 'cloud_resources', InvResourceType: 'composer_environment', BridgeServiceName: 'composer',
+            BridgePluginCategoryName: 'gcp-Cloud Composer', BridgeProvider: 'Google', BridgeCall: 'environments',
+            BridgeArnIdentifier: '', BridgeIdTemplate: '', BridgeResourceType: 'environments',
+            BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'gcp-Cloud Composer',
+            BridgeCollectionService: 'gcp-composer', DataIdentifier: 'data',
+        },
+    'Resource Manager':
+        {
+            enabled: true, isSingleSource: true, InvAsset: 'organization', InvService: 'Resource Manager',
+            InvResourceCategory: 'cloud_resources', InvResourceType: 'Organization', BridgeServiceName: 'organizations',
+            BridgePluginCategoryName: 'gcp-Resource Manager', BridgeProvider: 'Google', BridgeCall: 'list',
+            BridgeArnIdentifier: '', BridgeIdTemplate: '', BridgeResourceType: 'organizations',
+            BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'gcp-Resource Manager',
+            BridgeCollectionService: 'gcp-organizations', DataIdentifier: 'data',
         }
 };
 var calls = {
@@ -212,7 +239,8 @@ var calls = {
             pagination: true,
             paginationKey: 'pageToken',
             dataFilterKey: 'environments'
-        }
+        },
+        sendIntegration: serviceMap['Cloud Composer']
     },
     repositories: {
         list: {
@@ -222,6 +250,22 @@ var calls = {
         },
         sendIntegration: {
             enabled: true
+        }
+    },
+    apiGateways: {
+        list: {
+            url: 'https://apigateway.googleapis.com/v1/projects/{projectId}/locations/{locationId}/gateways',
+            location: 'region',
+            dataKey: 'gateways',
+            isDataArray: true
+        }
+    },
+    api: {
+        list: {
+            url: 'https://apigateway.googleapis.com/v1/projects/{projectId}/locations/{locationId}/apis',
+            location: 'region',
+            dataKey: 'apis',
+            isDataArray: true
         }
     },
     images: {
@@ -319,6 +363,13 @@ var calls = {
             url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/aggregated/instanceGroups',
             location: null,
             pagination: true
+        },
+        list : {
+            url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/zones/{locationId}/instanceGroups',
+            location: 'zone',
+            pagination: true,
+            ignoreMiscData: true
+
         }
     },
     instanceGroupManagers: {
@@ -334,6 +385,18 @@ var calls = {
             location: 'region',
             paginationKey: 'pageSize',
             pagination: true
+        },
+        sendIntegration: {
+            enabled: true
+        }
+    },
+    functionsv2: {
+        list: {
+            url: 'https://cloudfunctions.googleapis.com/v2/projects/{projectId}/locations/{locationId}/functions',
+            location: 'region',
+            paginationKey: 'pageSize',
+            pagination: true,
+            dataFilterKey: 'functions'
         },
         sendIntegration: {
             enabled: true
@@ -357,11 +420,24 @@ var calls = {
     },
     backendServices: {
         list: {
-            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/global/backendServices',
-            location: null,
-            pagination: true
+            globalURL: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/global/backendServices',
+            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/regions/{locationId}/backendServices',
+            location: 'region',
+            pagination: true,
+            ignoreMiscData: true
         },
     },
+
+    forwardingRules: {
+        list: {
+            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/regions/{locationId}/forwardingRules',
+            globalURL: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/global/forwardingRules',
+            location: 'region',
+            pagination: true,
+            ignoreMiscData: true
+        },
+    },
+
     healthChecks: {
         list: {
             url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/global/healthChecks',
@@ -379,9 +455,20 @@ var calls = {
     },
     targetHttpProxies: {
         list: {
-            url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/global/targetHttpProxies',
-            location: null,
-            pagination: true
+            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/regions/{locationId}/targetHttpProxies',
+            globalURL: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/global/targetHttpProxies',
+            location: 'region',
+            pagination: true,
+            ignoreMiscData: true,
+        }
+    },
+    targetHttpsProxies: {
+        list: {
+            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/regions/{locationId}/targetHttpsProxies',
+            globalURL: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/global/targetHttpsProxies',
+            location: 'region',
+            pagination: true,
+            ignoreMiscData: true
         }
     },
     autoscalers: {
@@ -441,7 +528,8 @@ var calls = {
             url: 'https://cloudbuild.clients6.google.com/v1/projects/{projectId}/locations/{locationId}/triggers',
             location: 'region',
             dataFilterKey: 'triggers'
-        }
+        },
+        sendIntegration: serviceMap['CloudBuild']
     },
     managedZones: {
         list: {
@@ -544,12 +632,14 @@ var calls = {
             pagination: false
         }
     },
-    urlMaps: { // https://compute.googleapis.com/compute/v1/projects/{project}/global/urlMaps
+    urlMaps: { // https://compute.googleapis.com/compute/v1/projects/{projectid}/global/urlMaps
         list: {
-            url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/global/urlMaps',
-            location: null,
+            globalURL: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/global/urlMaps',
+            url: 'https://compute.googleapis.com/compute/beta/projects/{projectId}/regions/{locationId}/urlMaps',
+            location: 'region',
             pagination: true,
-            nameRequired: true
+            nameRequired: true,
+            ignoreMiscData: true
         },
         sendIntegration: serviceMap['CLB']
     },
@@ -587,7 +677,8 @@ var calls = {
         listDatasets: {
             url: 'https://{locationId}-aiplatform.googleapis.com/v1/projects/{projectId}/locations/{locationId}/datasets',
             location: 'region',
-            dataKey: 'datasets'
+            dataKey: 'datasets',
+            isDataArray: true
         },
         listModels: {
             url: 'https://{locationId}-aiplatform.googleapis.com/v1/projects/{projectId}/locations/{locationId}/models',
@@ -719,6 +810,24 @@ var postcalls = {
             }
         },
     },
+    apiConfigs: {
+        list: {
+            url: 'https://apigateway.googleapis.com/v1/{name}/configs',
+            location: 'region',
+            reliesOnService: ['api'],
+            reliesOnCall: ['list'],
+            properties: ['name'],
+        }
+    },
+    apiGateways: {
+        getIamPolicy: {
+            url: 'https://apigateway.googleapis.com/v1/{name}:getIamPolicy',
+            location: 'region',
+            reliesOnService: ['apiGateways'],
+            reliesOnCall: ['list'],
+            properties: ['name'],
+        }
+    },
     datasets: {
         get: {
             url: 'https://bigquery.googleapis.com/bigquery/v2/projects/{projectId}/datasets/{datasetId}',
@@ -753,6 +862,17 @@ var postcalls = {
             properties: ['name']
         }
     },
+    functionsv2: {
+        getIamPolicy: {
+            url: 'https://cloudfunctions.googleapis.com/v2/{name}:getIamPolicy',
+            location: null,
+            method: 'POST',
+            reliesOnService: ['functionsv2'],
+            reliesOnCall: ['list'],
+            properties: ['name'],
+            body: { options: { requestedPolicyVersion: 3 } }
+        }
+    },
     jobs: {
         get: { //https://dataflow.googleapis.com/v1b3/projects/{projectId}/jobs/{jobId}
             url: 'https://dataflow.googleapis.com/v1b3/projects/{projectId}/locations/{locationId}/jobs/{id}',
@@ -761,6 +881,24 @@ var postcalls = {
             location: 'region',
             properties: ['id'],
             pagination: false,
+        }
+    },
+    instanceGroups: {
+        listInstances: {
+            url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/{location}/instanceGroups/{name}/listInstances',
+            method: 'POST',
+            reliesOnService: ['instanceGroups'],
+            reliesOnCall: ['aggregatedList'],
+            properties: ['location','name'],
+            filterObjKey: 'instanceGroups'
+        },
+        get: {
+            url: 'https://compute.googleapis.com/compute/v1/projects/{projectId}/{location}/instanceGroups/{name}',
+            reliesOnService: ['instanceGroups'],
+            reliesOnCall: ['aggregatedList'],
+            properties: ['location','name'],
+            filterObjKey: 'instanceGroups'
+
         }
     },
     organizations: { //https://cloudresourcemanager.googleapis.com/v1beta1/{resource=organizations/*}:getIamPolicy
@@ -794,7 +932,17 @@ var postcalls = {
             properties: ['organizationId'],
             pagination: true,
             paginationKey: 'pageSize'
-        }
+        },
+        listAccessPolicies: {
+            url: 'https://accesscontextmanager.googleapis.com/v1/accessPolicies?parent=organizations/{organizationId}',
+            reliesOnService: ['organizations'],
+            reliesOnCall: ['list'],
+            properties: ['organizationId'],
+            pagination: true,
+            paginationKey: 'pageSize',
+            dataKey: 'accessPolicies'
+        },
+        sendIntegration: serviceMap['Resource Manager']
     },
     folders:{ // https://cloudresourcemanager.googleapis.com/v2/folders
         list: {
@@ -978,6 +1126,17 @@ var tertiarycalls = {
             method: 'GET',
             pagination: false
         },
+    },
+    organizations: {
+        servicePerimeters: {
+            url: 'https://accesscontextmanager.googleapis.com/v1/{name}/servicePerimeters',
+            reliesOnService: ['organizations'],
+            reliesOnCall: ['listAccessPolicies'],
+            properties: ['name'],
+            method: 'GET',
+            pagination: true,
+            dataKey: 'servicePerimeters'
+        }
     }
 };
 
