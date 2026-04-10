@@ -68,6 +68,11 @@ function call(OracleConfig, options, callback) {
             });
         });
 
+        // Catch async network errors (DNS ENOTFOUND, ECONNREFUSED, etc.)
+        request.on('error', function(err) {
+            callback({ code: err.code || 'NetworkError', message: err.message });
+        });
+
         // Create signature
         signature.sign(request, {
             key: OracleConfig.privateKey,
