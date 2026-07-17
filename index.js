@@ -41,6 +41,11 @@ parser.add_argument('--china', {
     help: 'AWS only. Enables AWS China mode.',
     action: 'store_true'
 });
+parser.add_argument('--regions', {
+    help: 'AWS only. Restrict the scan to a comma-separated list of regions. ' +
+        'Both metadata collection and plugin execution will only use these regions. ' +
+        'Global services (IAM, S3, CloudFront, Route53, etc.) always run. E.g. us-east-1,eu-west-1'
+});
 parser.add_argument('--csv', { help: 'Output: CSV file' });
 parser.add_argument('--json', { help: 'Output: JSON file' });
 parser.add_argument('--junit', { help: 'Output: Junit file' });
@@ -82,6 +87,18 @@ parser.add_argument('--run-asl', {
 
 let settings = parser.parse_args();
 let cloudConfig = {};
+
+// Normalize the region allow-list (comma-separated string) into an array so that
+// both the collector and the plugin engine can restrict execution to these regions.
+if (settings.regions && settings.regions.length) {
+    settings.regions = settings.regions
+        .split(',')
+        .map(function(region) { return region.trim(); })
+        .filter(function(region) { return region.length; });
+    if (settings.regions.length) {
+        console.log(`INFO: Restricting scan to regions: ${settings.regions.join(', ')}`);
+    }
+}
 
 // Now execute the scans using the defined configuration information.
 if (!settings.config) {
