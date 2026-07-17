@@ -34,6 +34,20 @@ var filterRegionsBySelection = function(regionsMap, selectedRegions) {
     return filtered;
 };
 
+// User-selected regions (from the --regions flag), stored at module scope so
+// collectors that don't receive `settings` (e.g. the S3 per-bucket collector)
+// can still honor the allow-list. Set once at scan start via setRegions();
+// null means "no restriction".
+var selectedRegions = null;
+
+var setRegions = function(regionList) {
+    selectedRegions = (Array.isArray(regionList) && regionList.length) ? regionList : null;
+};
+
+var getSelectedRegions = function() {
+    return selectedRegions;
+};
+
 var regions = function(settings) {
     var regionsMap;
     if (settings.govcloud && settings.is_fedramp_type_high && settings.LAMBDA_REGION == 'us-gov-east-1') regionsMap = govRegionsFedRampEast1;
@@ -53,6 +67,8 @@ var regions = function(settings) {
 
 var helpers = {
     regions: regions,
+    setRegions: setRegions,
+    getSelectedRegions: getSelectedRegions,
     MAX_REGIONS_AT_A_TIME: 6,
     CLOUDSPLOIT_EVENTS_BUCKET: 'cloudsploit-engine-trails',
     CLOUDSPLOIT_EVENTS_SNS: 'aqua-cspm-sns-',
