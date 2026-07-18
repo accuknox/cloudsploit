@@ -68,6 +68,15 @@ var engine = function(cloudConfig, settings) {
         resourceMap = {};
     }
 
+    // Region restriction (--regions). Register the selected regions at module
+    // scope so collectors/plugins that don't receive `settings` can honor the
+    // allow-list: Azure plugins call helpers.locations() without settings, and
+    // the AWS S3 per-bucket collector needs it to skip out-of-region buckets.
+    if (settings.regions && settings.regions.length) {
+        if (settings.cloud === 'azure') require('./helpers/azure').setRegions(settings.regions);
+        if (settings.cloud === 'aws') require('./helpers/aws').setRegions(settings.regions);
+    }
+
     // Print customization options
     if (settings.compliance) console.log(`INFO: Using compliance modes: ${settings.compliance.join(', ')}`);
     if (settings.govcloud) console.log('INFO: Using AWS GovCloud mode');
@@ -169,7 +178,8 @@ var engine = function(cloudConfig, settings) {
         api_calls: apiCalls,
         paginate: settings.skip_paginate,
         govcloud: settings.govcloud,
-        china: settings.china
+        china: settings.china,
+        regions: settings.regions
     }, function(err, collection) {
         if (err || !collection || !Object.keys(collection).length) return console.log(`ERROR: Unable to obtain API metadata: ${err || 'No data returned'}`);
         outputHandler.writeCollection(collection, settings.cloud);
@@ -197,7 +207,20 @@ var engine = function(cloudConfig, settings) {
                             if (suppressionFilter([key, results[r].region || 'any', results[r].resource || 'any'].join(':'))) {
                                 continue;
                             }
-    
+
+                            // When --regions is set, restrict S3 results to the selected regions.
+                            // S3 is a global service (buckets are listed account-wide and always
+                            // collected), but each bucket result is tagged with the bucket's own
+                            // physical region, so buckets outside the selection would otherwise leak
+                            // into the report. Skip those. Results tagged 'global' are always kept.
+                            if (settings.regions && settings.regions.length &&
+                                plugin.category === 'S3' &&
+                                results[r].region &&
+                                results[r].region !== 'global' &&
+                                settings.regions.indexOf(results[r].region) === -1) {
+                                continue;
+                            }
+
                             resultsObject[plugin.title].push(results[r]);
 
                             var complianceMsg = [];
