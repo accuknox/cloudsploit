@@ -6,7 +6,123 @@ const {JWT}       = require('google-auth-library');
 
 var async         = require('async');
 
+// User-selected regions/zones (from the --regions flag), narrowed once at scan
+// start and stored at module scope because plugins call regions() without
+// access to settings. null means "no restriction".
+var selectedRegions = null;
+var filteredRegions = null;
+
+// Multi-region values that appear alongside real regions in some lists (e.g.
+// Artifact Registry repositories). They are kept when a selected region lives
+// inside them, since a 'us' multi-region resource covers 'us-central1'.
+var multiRegions = ['us', 'europe', 'asia'];
+
+// A GCP zone is its parent region plus a single-letter suffix (us-central1-a).
+// Accept either form in --regions: a region selects all of its zones, a zone
+// selects that zone only while still enabling the parent region for the
+// region-level API calls (subnetworks, dataproc, etc.).
+var parseSelection = function(entries) {
+    var selection = {regions: [], zones: {}, wholeRegions: {}, unknown: []};
+
+    entries.forEach(function(entry) {
+        var value = String(entry).trim().toLowerCase();
+        if (!value) return;
+
+        var region = value;
+        var zone = null;
+        if (regRegions.all_regions.indexOf(value) === -1) {
+            var match = value.match(/^(.+)-[a-z]$/);
+            if (match) {
+                region = match[1];
+                zone = value;
+            }
+        }
+
+        // Regions this build doesn't know about can't be intersected with the
+        // per-service lists, so they would scan nothing; report them back.
+        if (regRegions.all_regions.indexOf(region) === -1 && selection.unknown.indexOf(value) === -1) {
+            selection.unknown.push(value);
+        }
+
+        if (selection.regions.indexOf(region) === -1) selection.regions.push(region);
+        if (!selection.zones[region]) selection.zones[region] = [];
+        if (!zone) selection.wholeRegions[region] = true;
+        else if (selection.zones[region].indexOf(zone) === -1) selection.zones[region].push(zone);
+    });
+
+    return selection;
+};
+
+// Narrow the zones map to the selected zones. Regions that were not selected
+// are kept with an empty list rather than dropped, so plugins that index
+// zones[region] from data-derived locations don't hit undefined.
+var filterZonesBySelection = function(zonesMap, selection) {
+    var filtered = {};
+    Object.keys(zonesMap).forEach(function(region) {
+        if (selection.regions.indexOf(region) === -1) {
+            filtered[region] = [];
+        } else if (selection.wholeRegions[region]) {
+            filtered[region] = zonesMap[region];
+        } else {
+            filtered[region] = selection.zones[region];
+        }
+    });
+
+    // A selected zone whose region isn't in the map (newer region) still needs
+    // to be collected.
+    selection.regions.forEach(function(region) {
+        if (!filtered[region]) {
+            filtered[region] = selection.wholeRegions[region] ? [] : selection.zones[region];
+        }
+    });
+
+    return filtered;
+};
+
+// Given the full service -> regions map, return a copy narrowed to the selected
+// regions. 'global' entries are always kept so region-agnostic services (IAM,
+// storage, projects, SQL, etc.) keep running regardless of the selection.
+var filterRegionsBySelection = function(regionsMap, selection) {
+    var filtered = {};
+
+    Object.keys(regionsMap).forEach(function(service) {
+        var serviceRegions = regionsMap[service];
+
+        if (service === 'zones') {
+            filtered[service] = filterZonesBySelection(serviceRegions, selection);
+            return;
+        }
+
+        if (!Array.isArray(serviceRegions)) {
+            filtered[service] = serviceRegions;
+            return;
+        }
+
+        filtered[service] = serviceRegions.filter(function(region) {
+            if (region === 'global' || selection.regions.indexOf(region) > -1) return true;
+            if (multiRegions.indexOf(region) === -1) return false;
+            return selection.regions.some(function(selected) {
+                return selected.indexOf(region + '-') === 0;
+            });
+        });
+    });
+
+    return filtered;
+};
+
+// Returns the selected entries that aren't recognized GCP regions/zones so the
+// caller can warn about them.
+var setRegions = function(regionList) {
+    selectedRegions = (Array.isArray(regionList) && regionList.length) ? parseSelection(regionList) : null;
+    filteredRegions = selectedRegions ? filterRegionsBySelection(regRegions, selectedRegions) : null;
+    return selectedRegions ? selectedRegions.unknown : [];
+};
+
 var regions = function() {
+    // Restrict metadata collection and plugin execution to a user-selected set
+    // of regions/zones (from the --regions flag). When unset, behavior is
+    // unchanged.
+    if (filteredRegions) return filteredRegions;
     return regRegions;
 };
 
@@ -512,6 +628,7 @@ function makeRemediationCall(GoogleConfig, method, body, baseUrl, resource, call
 
 var helpers = {
     regions: regions,
+    setRegions: setRegions,
     MAX_REGIONS_AT_A_TIME: 6,
     authenticate: authenticate,
     processCall: processCall,
