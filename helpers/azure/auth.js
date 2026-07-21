@@ -266,10 +266,16 @@ module.exports = {
         }
     },
 
-    addLocations: function(obj, service, collection, err, data, skip_locations) {
+    addLocations: function(obj, service, collection, err, data, skip_locations, select_locations) {
         if (!service || !locations[service]) return;
         locations[service].forEach(function(location) {
             if (skip_locations.includes(location)) return;
+            // When a region allow-list is provided (--regions), only collect the
+            // selected locations. 'global' services are region-agnostic and are
+            // always collected.
+            if (select_locations && select_locations.length &&
+                location !== 'global' &&
+                !select_locations.includes(location)) return;
             collection[location.toLowerCase()] = {};
             if (err) {
                 collection[location.toLowerCase()].err = err;
@@ -290,10 +296,16 @@ module.exports = {
         });
     },
 
-    addGovLocations: function(obj, service, collection, err, data, skip_locations) {
+    addGovLocations: function(obj, service, collection, err, data, skip_locations, select_locations) {
         if (!service || !locations_gov[service]) return;
         locations_gov[service].forEach(function(location) {
             if (skip_locations.includes(location)) return;
+            // When a region allow-list is provided (--regions), only collect the
+            // selected locations. 'global' services are region-agnostic and are
+            // always collected.
+            if (select_locations && select_locations.length &&
+                location !== 'global' &&
+                !select_locations.includes(location)) return;
             collection[location.toLowerCase()] = {};
             if (err) {
                 collection[location.toLowerCase()].err = err;

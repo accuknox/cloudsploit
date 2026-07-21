@@ -42,10 +42,12 @@ parser.add_argument('--china', {
     action: 'store_true'
 });
 parser.add_argument('--regions', {
-    help: 'AWS/Azure only. Restrict the scan to a comma-separated list of regions/locations. ' +
+    help: 'AWS/Azure/GCP only. Restrict the scan to a comma-separated list of regions/locations. ' +
         'Both metadata collection and plugin execution will only use these regions. ' +
-        'Global services (AWS: IAM, S3, CloudFront, Route53; Azure: AAD, subscriptions, security center, etc.) ' +
-        'always run. E.g. AWS: us-east-1,eu-west-1  Azure: eastus,westeurope'
+        'GCP also accepts zone names (a zone restricts zonal calls to that zone and enables its parent region). ' +
+        'Global services (AWS: IAM, S3, CloudFront, Route53; Azure: AAD, subscriptions, security center; ' +
+        'GCP: IAM, storage, projects, SQL, etc.) always run. ' +
+        'E.g. AWS: us-east-1,eu-west-1  Azure: eastus,westeurope  GCP: us-central1-a,europe-west1'
 });
 parser.add_argument('--csv', { help: 'Output: CSV file' });
 parser.add_argument('--json', { help: 'Output: JSON file' });

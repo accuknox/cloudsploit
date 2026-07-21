@@ -70,11 +70,18 @@ var engine = function(cloudConfig, settings) {
 
     // Region restriction (--regions). Register the selected regions at module
     // scope so collectors/plugins that don't receive `settings` can honor the
-    // allow-list: Azure plugins call helpers.locations() without settings, and
-    // the AWS S3 per-bucket collector needs it to skip out-of-region buckets.
+    // allow-list: Azure plugins call helpers.locations() and GCP plugins call
+    // helpers.regions() without settings, and the AWS S3 per-bucket collector
+    // needs it to skip out-of-region buckets.
     if (settings.regions && settings.regions.length) {
         if (settings.cloud === 'azure') require('./helpers/azure').setRegions(settings.regions);
         if (settings.cloud === 'aws') require('./helpers/aws').setRegions(settings.regions);
+        if (settings.cloud === 'google') {
+            var unknownRegions = require('./helpers/google').setRegions(settings.regions);
+            if (unknownRegions.length) {
+                console.log(`WARN: Unrecognized GCP region/zone, nothing will be scanned for: ${unknownRegions.join(', ')}`);
+            }
+        }
     }
 
     // Print customization options
