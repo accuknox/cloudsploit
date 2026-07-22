@@ -1564,19 +1564,28 @@ var postcalls = [
                 reliesOnService: 's3',
                 reliesOnCall: 'listBuckets',
                 filterKey: 'Bucket',
-                filterValue: 'Name'
+                filterValue: 'Name',
+                deleteRegion: true,
+                signatureVersion: 'v4',
+                override: true
             },
             headBucket: {
                 reliesOnService: 's3',
                 reliesOnCall: 'listBuckets',
                 filterKey: 'Bucket',
-                filterValue: 'Name'
+                filterValue: 'Name',
+                deleteRegion: true,
+                signatureVersion: 'v4',
+                override: true
             },
             listObjects: {
                 reliesOnService: 's3',
                 reliesOnCall: 'listBuckets',
                 filterKey: 'Bucket',
-                filterValue: 'Name'
+                filterValue: 'Name',
+                deleteRegion: true,
+                signatureVersion: 'v4',
+                override: true
             },
             sendIntegration: {
                 enabled: true
