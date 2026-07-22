@@ -159,6 +159,14 @@ var collect = function(AWSConfig, settings, callback) {
                     var LocalAWSConfig = JSON.parse(JSON.stringify(AWSConfig));
                     LocalAWSConfig.region = region;
 
+                    // S3's account-wide calls are collected under us-east-1 but
+                    // any regional endpoint serves them, so a restricted scan
+                    // sends them from a selected region. `region`, not
+                    // LocalAWSConfig.region, still keys the results.
+                    if (serviceName === 'S3' && !callObj.override) {
+                        LocalAWSConfig.region = helpers.allowedRegion(region);
+                    }
+
                     if (callObj.override) {
                         collectors[serviceLower][callKey](LocalAWSConfig, collection, retries, function() {
                             if (callObj.rateLimit) {

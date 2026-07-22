@@ -37,9 +37,8 @@ var newRegionsUpdate =[
 
 module.exports = {
     default: ['us-east-1'],
-    // mx-central-1 is appended the same way the per-service lists below do it.
-    // Without it here, lookups that classify a resource by region (notably
-    // getS3BucketLocation) report buckets in that region as 'global'.
+    // mx-central-1 appended as the per-service lists below do; without it,
+    // getS3BucketLocation classifies buckets in that region as 'global'.
     all: [...regions, ...newRegionsUpdate, 'mx-central-1'],
     optin: ['ap-east-1', 'me-south-1', 'ap-southeast-3', 'mx-central-1'],   // Regions that AWS disables by default
     accessanalyzer: [...regions, ...newRegionsUpdate, 'mx-central-1'],

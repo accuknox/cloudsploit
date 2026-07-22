@@ -1,66 +1,22 @@
-var AWS = require('aws-sdk');
 var async = require('async');
 var helpers = require(__dirname + '/../../../helpers/aws');
 var awsRegions = require(__dirname + '/../../../helpers/aws/regions.js');
 
-// How S3 says "this bucket is not in the region you called". The first four are
-// aws-sdk's own regionRedirectErrorCodes (lib/services/s3.js); buckets in opt-in
-// regions (me-central-1, mx-central-1, ...) answer with the last one instead, a
-// plain 400 the SDK does not treat as a redirect and therefore never follows.
-var wrongRegionCodes = [
-    'AuthorizationHeaderMalformed', 'BadRequest', 'PermanentRedirect', 301,
-    'IllegalLocationConstraintException'
-];
-
-function isWrongRegion(err) {
-    return !!err && (wrongRegionCodes.indexOf(err.code) > -1 || err.statusCode == 301);
-}
-
 module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retries, callback) {
-    // Region allow-list (--regions). S3 is collected as a global service, so
-    // AWSConfig.region is us-east-1 and every request made here - including the
-    // ones made only to find out where a bucket lives - goes to us-east-1 and is
-    // recorded by CloudTrail there; aws-sdk also re-sends a redirected request to
-    // the bucket's own region, which records it there too. With a selection
-    // active every request is sent from a selected region and no redirect is
-    // followed out of the selection, so no S3 call lands in a region the user
-    // excluded. null means "no restriction" (original behavior).
-    var selectedRegions = helpers.getSelectedRegions ? helpers.getSelectedRegions() : null;
+    // Region allow-list (--regions); null means no restriction. S3 is collected
+    // as a global service, so AWSConfig.region is us-east-1 - including for the
+    // calls made only to find out where a bucket lives. Under a selection those
+    // requests are sent from a selected region instead (see helpers/aws/
+    // regionGuard.js), while results stay keyed on AWSConfig.region so plugins
+    // keep finding them where they expect.
+    var selectedRegions = helpers.getSelectedRegions();
     var restricted = !!(selectedRegions && selectedRegions.length);
-
-    // Region the requests originate from: the collection region normally, the
-    // first selected region when the scan is restricted and doesn't include it.
-    // Results stay keyed on AWSConfig.region either way so plugins keep finding
-    // them where they expect.
-    var homeRegion = (restricted && selectedRegions.indexOf(AWSConfig.region) === -1) ?
-        selectedRegions[0] : AWSConfig.region;
+    var homeRegion = helpers.allowedRegion(AWSConfig.region);
 
     var clients = {};
 
     function clientFor(region) {
-        if (!clients[region]) {
-            var regionConfig = JSON.parse(JSON.stringify(AWSConfig));
-            regionConfig.region = region;
-            var client = new AWS.S3(regionConfig);
-
-            // aws-sdk re-points S3 requests on its own in two places, and both
-            // put a request in a region the scan excluded: it re-sends a
-            // redirected call to the bucket's own region, and it rewrites any
-            // request whose bucket is in its (process-wide, prototype-level)
-            // bucketRegionCache. Under a selection the request has to stay in
-            // the region it was aimed at - callAndLearnRegion() reads the
-            // bucket's real region off the response instead.
-            if (restricted) {
-                client.retryableError = function(err, request) {
-                    if (isWrongRegion(err)) return false;
-                    return AWS.S3.prototype.retryableError.call(this, err, request);
-                };
-                client.correctBucketRegionFromCache = function() {};
-            }
-
-            clients[region] = client;
-        }
-
+        if (!clients[region]) clients[region] = helpers.createRegionalClient('S3', AWSConfig, region);
         return clients[region];
     }
 
@@ -88,7 +44,7 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
 
             for (var t in collection.cloudtrail.describeTrails[region].data) {
                 var trail = collection.cloudtrail.describeTrails[region].data[t];
-
+                
                 if (knownBuckets.indexOf(trail.S3BucketName) === -1) {
                     knownBuckets.push(trail.S3BucketName);
                 }
@@ -119,15 +75,14 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
 
             results[bucket].err = bErr;
 
-            if (!isWrongRegion(bErr)) return bcb();
+            if (!helpers.isWrongRegionError(bErr)) return bcb();
 
-            // aws-sdk follows most of these redirects itself, so reaching here
-            // means it could not: either it never learned the region, or the
-            // answer was an opt-in region's 400, which it does not act on. When
-            // S3 reported the region (err.region, or the x-amz-bucket-region
-            // header the SDK keeps in bucketRegionCache), retry straight there.
+            // The bucket lives elsewhere and aws-sdk did not follow the redirect
+            // itself - it never does for the 400 opt-in regions answer with. S3
+            // reports the region on the error, or in the x-amz-bucket-region
+            // header the SDK keeps in bucketRegionCache.
             var bucketRegion = bErr.region || s3.bucketRegionCache[bucket] || null;
-            if (bucketRegion && bucketRegion !== homeRegion) return retryInRegion(bucket, bucketRegion, bcb);
+            if (bucketRegion && bucketRegion !== homeRegion) return callInRegion(bucket, bucketRegion, bcb);
 
             // It reported nothing, so ask where the bucket is and retry there.
             helpers.makeCustomCollectorCall(s3, 'getBucketLocation', {Bucket:bucket}, retries, null, null, null, function(locErr, locData) {
@@ -135,47 +90,52 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
                 // Special case where location constraint is EU - rewrite as eu-west-1
                 if (locData.LocationConstraint == 'EU') locData.LocationConstraint = 'eu-west-1';
 
-                retryInRegion(bucket, locData.LocationConstraint, bcb);
+                callInRegion(bucket, locData.LocationConstraint, bcb);
             });
         });
     }
 
-    // Second attempt for a bucket that lives in another region, in that region.
-    function retryInRegion(bucket, bucketRegion, bcb) {
-        clientFor(bucketRegion)[callKey]({Bucket:bucket}, function(altErr, altData){
-            if (altErr) {
-                results[bucket].err = altErr;
+    // Runs the call in the region the bucket actually lives in.
+    function callInRegion(bucket, bucketRegion, bcb) {
+        helpers.makeCustomCollectorCall(clientFor(bucketRegion), callKey, {Bucket:bucket}, retries, null, null, null, function(err, data){
+            if (err) {
+                results[bucket].err = err;
             } else {
                 results[bucket].err = null;
-                results[bucket].data = altData;
+                results[bucket].data = data;
             }
             bcb();
         });
     }
 
-    // Restricted flow. The call is made in `region` - always one the scan is
-    // allowed to touch - and its answer says where the bucket actually lives:
-    // S3 serves a bucket-level call only from the bucket's own region, so a
-    // success means the bucket is here, and a redirect carries the real region
-    // on err.region (the SDK records it in bucketRegionCache as well). That is
-    // how a bucket's region is discovered under a selection: no getBucketLocation
-    // probe, and nothing sent to a region outside the selection.
+    // Restricted flow: the call is made in `region` - always one the scan may
+    // touch - and its answer says where the bucket really lives, so no separate
+    // getBucketLocation probe is needed and nothing is sent outside the
+    // selection. S3 serves a bucket-level call only from the bucket's own
+    // region, so success means the bucket is here.
     function callAndLearnRegion(bucket, region, bcb) {
         var client = clientFor(region);
 
         helpers.makeCustomCollectorCall(client, callKey, {Bucket:bucket}, retries, null, null, null, function(err, data) {
             if (!err) {
-                locCache[bucket] = region;
+                // getBucketLocation is the exception: every region answers it,
+                // and the answer is the region itself. Trusting the call region
+                // here would cache the wrong region for every bucket and send
+                // the next per-bucket call to the wrong place.
+                var learned = region;
+                if (callKey === 'getBucketLocation' && data) {
+                    learned = regionFromConstraint(data.LocationConstraint) || region;
+                }
+
+                locCache[bucket] = learned;
                 results[bucket].data = data;
                 return bcb();
             }
 
-            // Where the bucket really lives comes back with the failure: on
-            // err.region, or in the x-amz-bucket-region header the SDK records
-            // in bucketRegionCache. The error code is not a reliable signal -
-            // buckets in opt-in regions (me-central-1, mx-central-1, ...) answer
-            // a cross-region call with a plain 400/403 rather than a redirect -
-            // so trust the region S3 reported instead of the code.
+            // Where the bucket really lives comes back with the failure, on
+            // err.region or in the header the SDK keeps in bucketRegionCache.
+            // The error code is not a reliable signal (opt-in regions answer a
+            // cross-region call with a plain 400), so trust the region instead.
             var bucketRegion = err.region || client.bucketRegionCache[bucket] || null;
 
             if (bucketRegion && bucketRegion !== region) {
@@ -190,21 +150,18 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
             }
 
             // A real error from the bucket's own region (access denied, no such
-            // configuration, ...). The region is left uncached: guessing it here
-            // would send the remaining per-bucket calls somewhere they don't
-            // belong, and the next call re-probes from a selected region anyway.
+            // configuration, ...). The region is left uncached rather than
+            // guessed; the next call re-probes from a selected region anyway.
             results[bucket].err = err;
             bcb();
         });
     }
 
-    // A bucket outside the selection: nothing is collected for it. getBucketLocation
-    // is the one call still worth answering, and it can be answered without a
-    // request - the region came from S3's own x-amz-bucket-region header. Plugins
-    // tag every S3 result with the bucket's region through that call, and the
-    // engine needs that tag to keep the bucket out of a region-restricted report;
-    // dropping the entry instead would leave the bucket tagged 'global' and its
-    // "unable to obtain data" rows would survive the filter.
+    // A bucket outside the selection: nothing is collected for it, except
+    // getBucketLocation, which the region we just learned answers for free.
+    // Plugins tag S3 results with the bucket's region through that call and the
+    // engine needs the tag to filter the bucket out of the report - without it
+    // the bucket is tagged 'global' and its rows survive the filter.
     function skipOutOfRegion(bucket, bucketRegion) {
         if (callKey !== 'getBucketLocation') {
             delete results[bucket];
@@ -215,15 +172,6 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
         results[bucket] = {
             data: {LocationConstraint: bucketRegion === 'us-east-1' ? '' : bucketRegion}
         };
-    }
-
-    // Region already known and inside the selection: call it directly, no probe.
-    function callInRegion(bucket, bucketRegion, bcb) {
-        helpers.makeCustomCollectorCall(clientFor(bucketRegion), callKey, {Bucket:bucket}, retries, null, null, null, function(err, data){
-            if (err) results[bucket].err = err;
-            else results[bucket].data = data;
-            bcb();
-        });
     }
 
     // Map an S3 LocationConstraint to a region id, or null when it isn't one we
