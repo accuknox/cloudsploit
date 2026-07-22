@@ -68,11 +68,10 @@ var engine = function(cloudConfig, settings) {
         resourceMap = {};
     }
 
-    // Region restriction (--regions). Register the selected regions at module
-    // scope so collectors/plugins that don't receive `settings` can honor the
-    // allow-list: Azure plugins call helpers.locations() and GCP plugins call
-    // helpers.regions() without settings, and the AWS S3 per-bucket collector
-    // needs it to skip out-of-region buckets.
+    // Region restriction (--regions). Registering the selection at module scope
+    // lets collectors and plugins that never receive `settings` honor it, and on
+    // AWS it also installs the guard that keeps requests inside the selection
+    // (see helpers/aws/regionGuard.js).
     if (settings.regions && settings.regions.length) {
         if (settings.cloud === 'azure') require('./helpers/azure').setRegions(settings.regions);
         if (settings.cloud === 'aws') require('./helpers/aws').setRegions(settings.regions);
@@ -215,11 +214,9 @@ var engine = function(cloudConfig, settings) {
                                 continue;
                             }
 
-                            // When --regions is set, restrict S3 results to the selected regions.
-                            // S3 is a global service (buckets are listed account-wide and always
-                            // collected), but each bucket result is tagged with the bucket's own
-                            // physical region, so buckets outside the selection would otherwise leak
-                            // into the report. Skip those. Results tagged 'global' are always kept.
+                            // Buckets are listed account-wide, so an S3 result can belong to a
+                            // region the scan excluded. Each is tagged with the bucket's own
+                            // region, so drop those; 'global' results are always kept.
                             if (settings.regions && settings.regions.length &&
                                 plugin.category === 'S3' &&
                                 results[r].region &&

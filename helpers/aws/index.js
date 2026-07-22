@@ -7,6 +7,7 @@ var govRegions = require('./regions_gov.js');
 var govRegionsFedRampEast1  = require('./regions_gov_fedramp_east_1.js');
 var govRegionsFedRampWest1  = require('./regions_gov_fedramp_west_1.js');
 var chinaRegions = require('./regions_china.js');
+var regionGuard = require('./regionGuard.js');
 
 // Meta keys (not per-service scan lists) that must never be narrowed by a
 // region allow-list: `default`/`all` are used for lookups and classification,
@@ -34,32 +35,6 @@ var filterRegionsBySelection = function(regionsMap, selectedRegions) {
     return filtered;
 };
 
-// User-selected regions (from the --regions flag), stored at module scope so
-// collectors that don't receive `settings` (e.g. the S3 per-bucket collector)
-// can still honor the allow-list. Set once at scan start via setRegions();
-// null means "no restriction".
-var selectedRegions = null;
-
-var setRegions = function(regionList) {
-    selectedRegions = (Array.isArray(regionList) && regionList.length) ? regionList : null;
-};
-
-var getSelectedRegions = function() {
-    return selectedRegions;
-};
-
-// S3 is collected as a global service (regions.s3 is ['us-east-1']), so its
-// account-wide calls are sent to us-east-1 and recorded by CloudTrail there even
-// when the scan was restricted to other regions. Every regional S3 endpoint
-// serves them, so route them through a selected region instead. Returns the
-// region unchanged when the scan isn't restricted or the region is already
-// selected. Only the endpoint moves - results stay keyed on the original region.
-var s3CallRegion = function(region) {
-    if (!selectedRegions || !selectedRegions.length) return region;
-    if (selectedRegions.indexOf(region) > -1) return region;
-    return selectedRegions[0];
-};
-
 var regions = function(settings) {
     var regionsMap;
     if (settings.govcloud && settings.is_fedramp_type_high && settings.LAMBDA_REGION == 'us-gov-east-1') regionsMap = govRegionsFedRampEast1;
@@ -79,9 +54,11 @@ var regions = function(settings) {
 
 var helpers = {
     regions: regions,
-    setRegions: setRegions,
-    getSelectedRegions: getSelectedRegions,
-    s3CallRegion: s3CallRegion,
+    setRegions: regionGuard.setRegions,
+    getSelectedRegions: regionGuard.getSelectedRegions,
+    allowedRegion: regionGuard.allowedRegion,
+    isWrongRegionError: regionGuard.isWrongRegionError,
+    createRegionalClient: regionGuard.createClient,
     MAX_REGIONS_AT_A_TIME: 6,
     CLOUDSPLOIT_EVENTS_BUCKET: 'cloudsploit-engine-trails',
     CLOUDSPLOIT_EVENTS_SNS: 'aqua-cspm-sns-',

@@ -131,13 +131,12 @@ var collect = function(AWSConfig, settings, callback) {
                     var LocalAWSConfig = JSON.parse(JSON.stringify(AWSConfig));
                     LocalAWSConfig.region = region;
 
-                    // S3's account-wide calls (listBuckets) are collected under
-                    // us-east-1 but any regional endpoint serves them, so a
-                    // region-restricted scan sends them from a selected region
-                    // and leaves no CloudTrail entry outside the selection.
-                    // `region`, not LocalAWSConfig.region, keys the results.
+                    // S3's account-wide calls are collected under us-east-1 but
+                    // any regional endpoint serves them, so a restricted scan
+                    // sends them from a selected region. `region`, not
+                    // LocalAWSConfig.region, still keys the results.
                     if (serviceName === 'S3' && !callObj.override) {
-                        LocalAWSConfig.region = helpers.s3CallRegion(region);
+                        LocalAWSConfig.region = helpers.allowedRegion(region);
                     }
 
                     if (callObj.override) {
