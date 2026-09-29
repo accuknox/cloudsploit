@@ -39,6 +39,32 @@ const listConfigurations = [
     {
         'id': '/subscriptions/123/resourceGroups/test-rg/providers/Microsoft.Web/sites/test-app-3/config/web',
         'name': 'web'
+    },
+    {
+        'id': '/subscriptions/123/resourceGroups/test-rg/providers/Microsoft.Web/sites/test-app-4/config/web',
+        'name': 'web',
+        'publicNetworkAccess': 'Enabled',
+        'ipSecurityRestrictionsDefaultAction': 'Deny',
+        'ipSecurityRestrictions': [
+            {
+                'ipAddress': '192.168.1.0/24',
+                'action': 'Allow',
+                'name': 'AllowInternal'
+            }
+        ]
+    },
+    {
+        'id': '/subscriptions/123/resourceGroups/test-rg/providers/Microsoft.Web/sites/test-app-5/config/web',
+        'name': 'web',
+        'publicNetworkAccess': 'Enabled',
+        'ipSecurityRestrictionsDefaultAction': 'Deny',
+        'ipSecurityRestrictions': [
+            {
+                'ipAddress': '0.0.0.0/0',
+                'action': 'Allow',
+                'name': 'AllowAll'
+            }
+        ]
     }
 ];
 
@@ -143,6 +169,28 @@ describe('appServicePublicAccess', function () {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(0);
                 expect(results[0].message).to.include('App Service has public network access disabled');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give passing result if App Service has restricted IP security with no open CIDR', function (done) {
+            const cache = createCache([webApps[0]], [listConfigurations[3]]);
+            appServicePublicAccess.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(0);
+                expect(results[0].message).to.include('App Service has public network access disabled');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give failing result if App Service has open CIDR range in IP security restrictions', function (done) {
+            const cache = createCache([webApps[1]], [listConfigurations[4]]);
+            appServicePublicAccess.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(2);
+                expect(results[0].message).to.include('App Service does not have public network access disabled');
                 expect(results[0].region).to.equal('eastus');
                 done();
             });

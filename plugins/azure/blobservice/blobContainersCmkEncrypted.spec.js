@@ -12,8 +12,17 @@ const storageAccounts = [
         'location': 'eastus',
         'name': 'acc',
         'allowBlobPublicAccess': false
+    },
+    {
+        id: '/subscriptions/123/resourceGroups/aqua-resource-group/providers/Microsoft.Storage/storageAccounts/acc',
+        location: 'eastus',
+        name: 'acc',
+        encryption: {
+            keySource: 'Microsoft.Keyvault'
+        }
     }
 ];
+
 
 const blobContainers = [
     {
@@ -194,7 +203,7 @@ describe('blobContainersCmkEncrypted', function() {
             });
         });
 
-        it('should give unknow result if unable to query encryption scopes for Storage Accounts:', function(done) {
+        it('should give unknown result if unable to query encryption scopes for Storage Accounts:', function(done) {
             const cache = createErrorCache('unknownEncryptionScopes');
             blobContainersCmkEncrypted.run(cache, {}, (err, results) => {
                 expect(results.length).to.equal(1);
@@ -227,7 +236,18 @@ describe('blobContainersCmkEncrypted', function() {
             });
         });
 
-         it('should also give failing result if Blob container does not have CMK encryption enabled', function(done) {
+        it('should give passing result if Blob container inherits CMK from storage account level',function(done){
+            const cache=createCache([storageAccounts[2]],[blobContainers[0]],[])
+            blobContainersCmkEncrypted.run(cache, {}, (err,results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(0);
+                expect(results[0].message).to.include('Blob container has CMK encryption enabled');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            })
+        })
+
+        it('should also give failing result if Blob container does not have CMK encryption enabled', function(done) {
             const cache = createCache([storageAccounts[0]], [blobContainers[0]], [encryptionScopes[1]]);
             blobContainersCmkEncrypted.run(cache, {}, (err, results) => {
                 expect(results.length).to.equal(1);

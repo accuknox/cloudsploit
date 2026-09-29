@@ -39,7 +39,55 @@ module.exports = {
         
                 if (batchAccount.publicNetworkAccess && 
                     batchAccount.publicNetworkAccess.toLowerCase() === 'enabled') {
-                    helpers.addResult(results, 2, 'Batch account is publicly accessible', location, batchAccount.id);
+
+                    let isPublic = true;
+                    const accountAccess = batchAccount.networkProfile && batchAccount.networkProfile.accountAccess;
+                    const nodeManagementAccess = batchAccount.networkProfile && batchAccount.networkProfile.nodeManagementAccess;
+                    
+                    let accountAccessRestricted = false;
+                    let nodeManagementAccessRestricted = false;
+
+                    // Check Account Access
+                    if (accountAccess && accountAccess.ipRules && accountAccess.ipRules.length > 0) {
+                        let hasAccountOpenCidr = false;
+                        for (let rule of accountAccess.ipRules) {
+                            if (rule.action && rule.action.toLowerCase() === 'allow' &&
+                                helpers.isOpenCidrRange(rule.value)) {
+                                hasAccountOpenCidr = true;
+                                break;
+                            }
+                        }
+                        if (!hasAccountOpenCidr) {
+                            accountAccessRestricted = true;
+                        }
+                    }
+                    
+                    // Check Node Management Access
+                    if (nodeManagementAccess && nodeManagementAccess.ipRules && nodeManagementAccess.ipRules.length > 0) {
+                        let hasNodeOpenCidr = false;
+                        for (let rule of nodeManagementAccess.ipRules) {
+                            if (rule.action && rule.action.toLowerCase() === 'allow' &&
+                                helpers.isOpenCidrRange(rule.value)) {
+                                hasNodeOpenCidr = true;
+                                break;
+                            }
+                        }
+                        if (!hasNodeOpenCidr) {
+                            nodeManagementAccessRestricted = true;
+                        }
+                    }
+                    
+                    // Both Account Access and Node Management Access must be restricted for it to be NOT public
+                    // Or if Node Management Access is not configured, consider it restricted
+                    if (accountAccessRestricted && (nodeManagementAccessRestricted || !nodeManagementAccess)) {
+                        isPublic = false;
+                    }
+
+                    if (isPublic) {
+                        helpers.addResult(results, 2, 'Batch account is publicly accessible', location, batchAccount.id);
+                    } else {
+                        helpers.addResult(results, 0, 'Batch account is not publicly accessible', location, batchAccount.id);
+                    }
                 } else {
                     helpers.addResult(results, 0, 'Batch account is not publicly accessible', location, batchAccount.id);
                 }    

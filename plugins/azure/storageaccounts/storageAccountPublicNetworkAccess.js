@@ -37,12 +37,35 @@ module.exports = {
 
             for (let account of storageAccount.data) {
                 if (!account.id) continue;
-
-                if (account.publicNetworkAccess && (account.publicNetworkAccess.toLowerCase() == 'disabled' || account.publicNetworkAccess.toLowerCase() == 'securedbyperimeter')){
+                
+                if (account.publicNetworkAccess && (account.publicNetworkAccess.toLowerCase() == 'disabled' || account.publicNetworkAccess.toLowerCase() == 'securedbyperimeter' )){
                     helpers.addResult(results, 0, 'Storage account has public network access disabled', location, account.id);
                 } else {
-                    helpers.addResult(results, 2, 'Storage account does not have public network access disabled', location, account.id);
-                }
+                    const hasIpRules = account.networkAcls && account.networkAcls.ipRules && account.networkAcls.ipRules.length > 0;
+                    let hasOpenCidr = false;
+
+                    if (hasIpRules) {
+
+                        for (let rule of account.networkAcls.ipRules) {
+                            if (helpers.isOpenCidrRange(rule.value || rule.ipAddressOrRange)) {
+                                hasOpenCidr = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    const restricted = account.networkAcls && account.networkAcls.defaultAction && account.networkAcls.defaultAction.toLowerCase() === 'deny';
+                    
+                    const hasVirtualNetworks = account.networkAcls && account.networkAcls.virtualNetworkRules && account.networkAcls.virtualNetworkRules.length > 0;
+
+                    if ( restricted && !hasOpenCidr) {
+                        helpers.addResult(results, 0, 'Storage account has public network access disabled', location, account.id);
+                    } else if (hasVirtualNetworks) {
+                        helpers.addResult(results, 0, 'Storage account has public network access disabled', location, account.id);
+                    } else {
+                        helpers.addResult(results, 2, 'Storage account has public network access enabled for all networks', location, account.id);
+                    }
+                } 
             }
             
             rcb();

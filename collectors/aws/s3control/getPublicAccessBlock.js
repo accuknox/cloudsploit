@@ -12,7 +12,7 @@ module.exports = function(AWSConfig, collection, retries, callback) {
         AccountId: accountId
     };
 
-    helpers.makeCustomCollectorCall(s3control, 'getPublicAccessBlock', params, retries, null, null, null, function(err, data) {
+    helpers.makeCustomCollectorCall(s3control, 'getPublicAccessBlock', params, retries, null, null, null, settings, scanAWSConfig, AWSConfig, function(err, data) {
         if (err) {
             collection.s3control.getPublicAccessBlock[AWSConfig.region][accountId].err = err;
         }

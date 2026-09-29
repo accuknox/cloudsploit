@@ -38,10 +38,38 @@ module.exports = {
             for (let domain of domains.data) {
                 if (!domain.id) continue;
 
-                if (domain.publicNetworkAccess && domain.publicNetworkAccess.toLowerCase() === 'enabled') {
-                    helpers.addResult(results, 2, 'Event Grid domain has public network access enabled', location, domain.id);
+                if (domain.publicNetworkAccess &&
+                    domain.publicNetworkAccess.toLowerCase() === 'disabled') {
+
+                    helpers.addResult(results, 0,
+                        'Event Grid domain does not have public network access enabled',
+                        location, domain.id);
+
                 } else {
-                    helpers.addResult(results, 0, 'Event Grid domain does not have public network access enabled', location, domain.id);
+
+                    let hasOpenCidr = false;
+
+                    if (domain.inboundIpRules && domain.inboundIpRules.length) {
+                        for (let rule of domain.inboundIpRules) {
+                            if (helpers.isOpenCidrRange(rule.ipMask)) {
+                                hasOpenCidr = true;
+                                break;
+                            }
+                        }
+                    }
+
+                    const restricted = domain.inboundIpRules &&
+                        domain.inboundIpRules.length > 0 && !hasOpenCidr;
+
+                    if (restricted) {
+                        helpers.addResult(results, 0,
+                            'Event Grid domain does not have public network access enabled',
+                            location, domain.id);
+                    } else {
+                        helpers.addResult(results, 2,
+                            'Event Grid domain has public network access enabled',
+                            location, domain.id);
+                    }
                 }
             }
             rcb();

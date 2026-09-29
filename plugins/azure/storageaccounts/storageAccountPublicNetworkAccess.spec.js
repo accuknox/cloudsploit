@@ -22,6 +22,38 @@ const storageAccounts = [
         'name': 'acc',
         'tags': {},
         "publicNetworkAccess": "SecuredByPerimeter"
+    },
+    {
+        'id': '/subscriptions/123/resourceGroups/aqua-resource-group/providers/Microsoft.Storage/storageAccounts/acc',
+        'location': 'eastus',
+        'name': 'acc',
+        'tags': {},
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+            "defaultAction": "Deny",
+            "ipRules": [
+                {
+                    "value": "192.168.1.0/24",
+                    "action": "Allow"
+                }
+            ]
+        }
+    },
+    {
+        'id': '/subscriptions/123/resourceGroups/aqua-resource-group/providers/Microsoft.Storage/storageAccounts/acc',
+        'location': 'eastus',
+        'name': 'acc',
+        'tags': {},
+        "publicNetworkAccess": "Enabled",
+        "networkAcls": {
+            "defaultAction": "Deny",
+            "ipRules": [
+                {
+                    "value": "0.0.0.0/0",
+                    "action": "Allow"
+                }
+            ]
+        }
     }
 ];
 
@@ -87,7 +119,7 @@ describe('storageAccountPublicNetworkAccess', function() {
             storageAccountPublicNetworkAccess.run(cache, {}, (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(2);
-                expect(results[0].message).to.include('Storage account does not have public network access disabled');
+                expect(results[0].message).to.include('Storage account has public network access enabled for all networks');
                 expect(results[0].region).to.equal('eastus');
                 done();
             });
@@ -99,6 +131,28 @@ describe('storageAccountPublicNetworkAccess', function() {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(0);
                 expect(results[0].message).to.include('Storage account has public network access disabled');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give passing result if Storage account has public network access enabled but restricted by network ACLs', function(done) {
+            const cache = createCache([storageAccounts[3]]);
+            storageAccountPublicNetworkAccess.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(0);
+                expect(results[0].message).to.include('Storage account has public network access disabled');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give failing result if Storage account has public network access enabled with 0.0.0.0/0', function(done) {
+            const cache = createCache([storageAccounts[4]]);
+            storageAccountPublicNetworkAccess.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(2);
+                expect(results[0].message).to.include('Storage account has public network access enabled for all networks');
                 expect(results[0].region).to.equal('eastus');
                 done();
             });

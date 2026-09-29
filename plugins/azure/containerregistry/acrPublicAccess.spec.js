@@ -98,6 +98,67 @@ describe('acrPublicAccess', function() {
                     }
                 ]
             );
+            acrPublicAccess.run(cache, {}, callback);
+        });
+
+        it('should give passing result if selected networks are configured', function(done) {
+            const callback = (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(0);
+                expect(results[0].message).to.include('Container registry is not publicly accessible');
+                expect(results[0].region).to.equal('eastus');
+                done()
+            };
+
+            const cache = createCache(
+                null,
+                [
+                    {
+                        "id": "/subscriptions/ade0e01e-f9cd-49d3-bba7-d5a5362a3414/resourceGroups/devresourcegroup/providers/Microsoft.ContainerRegistry/registries/testregistry12543",
+                        "name": "testregistry12543",
+                        "type": "Microsoft.ContainerRegistry/registries",
+                        "location": "eastus",
+                        "publicNetworkAccess": "Enabled",
+                        "networkRuleSet": {
+                            "defaultAction": "Deny",
+                            "ipRules": [
+                                {
+                                    "action": "Allow",
+                                    "ipAddressOrCidr": "103.177.240.106"
+                                }
+                            ]
+                        }
+                    }
+                ]
+            );
+
+            acrPublicAccess.run(cache, {}, callback);
+        });
+
+        it('should give failing result if all networks are selected', function(done) {
+            const callback = (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(2);
+                expect(results[0].message).to.include('Container registry is publicly accessible');
+                expect(results[0].region).to.equal('eastus');
+                done()
+            };
+
+            const cache = createCache(
+                null,
+                [
+                    {
+                        "id": "/subscriptions/ade0e01e-f9cd-49d3-bba7-d5a5362a3414/resourceGroups/devresourcegroup/providers/Microsoft.ContainerRegistry/registries/testregistry12543",
+                        "name": "testregistry12543",
+                        "type": "Microsoft.ContainerRegistry/registries",
+                        "location": "eastus",
+                        "publicNetworkAccess": "Enabled",
+                        "networkRuleSet": {
+                            "defaultAction": "Allow"
+                        }
+                    }
+                ]
+            );
 
             acrPublicAccess.run(cache, {}, callback);
         })

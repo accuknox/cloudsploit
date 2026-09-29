@@ -391,12 +391,27 @@ function checkFlexibleServerConfigs(servers, cache, source, location, results, s
     });
 }
 
-function checkMicrosoftDefender(pricings, serviceName, serviceDisplayName, results, location ) {
+function checkMicrosoftDefender(pricings, serviceName, serviceDisplayName, results, location, requiredExtensions) {
 
     let pricingData = pricings.data.find((pricing) => pricing.name.toLowerCase() === serviceName);
     if (pricingData) {
         if (pricingData.pricingTier.toLowerCase() === 'standard') {
-            addResult(results, 0, `Azure Defender is enabled for ${serviceDisplayName}`, location, pricingData.id);
+            if (requiredExtensions && requiredExtensions.length) {
+                let extensions = pricingData.extensions || [];
+
+                let missingExtensions = requiredExtensions.filter((extensionName) => {
+                    let extension = extensions.find((ext) => ext.name && ext.name.toLowerCase() === extensionName.toLowerCase());
+                    return !extension || !extension.isEnabled || extension.isEnabled.toString().toLowerCase() !== 'true';
+                });
+
+                if (missingExtensions.length) {
+                    addResult(results, 2, `Azure Defender for ${serviceDisplayName} is enabled but the following extensions are not enabled: ${missingExtensions.join(', ')}`, location, pricingData.id);
+                } else {
+                    addResult(results, 0, `Azure Defender is enabled for ${serviceDisplayName} with all required extensions enabled`, location, pricingData.id);
+                }
+            } else {
+                addResult(results, 0, `Azure Defender is enabled for ${serviceDisplayName}`, location, pricingData.id);
+            }
         } else {
             addResult(results, 2, `Azure Defender is not enabled for ${serviceDisplayName}`, location, pricingData.id);
         }
@@ -855,6 +870,16 @@ function checkNetworkExposure(cache, source, networkInterfaces, securityGroups, 
 
     return exposedPath;
 }
+
+function isOpenCidrRange(cidr) {
+    if (!cidr || typeof cidr !== 'string') return false;
+
+    const trimmed = cidr.trim();
+    return trimmed === '0.0.0.0/0' ||
+           trimmed === '::/0' ||
+           trimmed === '0.0.0.0';
+}
+
 module.exports = {
     addResult: addResult,
     findOpenPorts: findOpenPorts,
@@ -868,7 +893,6 @@ module.exports = {
     remediateOpenPortsHelper: remediateOpenPortsHelper,
     checkMicrosoftDefender: checkMicrosoftDefender,
     checkFlexibleServerConfigs:checkFlexibleServerConfigs,
-    checkNetworkExposure: checkNetworkExposure
-
+    checkNetworkExposure: checkNetworkExposure,
+    isOpenCidrRange: isOpenCidrRange
 };
-

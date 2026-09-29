@@ -38,12 +38,26 @@ module.exports = {
             for (let workspace of machineLearningWorkspaces.data) {
                 if (!workspace.id) continue; 
 
-                if (workspace.publicNetworkAccess && workspace.publicNetworkAccess.toLowerCase()=='disabled') {
+                if (workspace.publicNetworkAccess && workspace.publicNetworkAccess.toLowerCase() === 'disabled') {
                     helpers.addResult(results, 0,
                         'Machine Learning workspace has public network access disabled', location, workspace.id);
                 } else {
-                    helpers.addResult(results, 2,
-                        'Machine Learning workspace has public network access enabled', location, workspace.id);
+                    
+                    const hasIpRules = workspace.networkAcls && workspace.networkAcls.ipRules &&
+                                        workspace.networkAcls.ipRules.length > 0;
+
+                    const restricted = workspace.networkAcls &&
+                        workspace.networkAcls.defaultAction &&
+                        workspace.networkAcls.defaultAction.toLowerCase() === 'deny' &&
+                        hasIpRules;
+
+                    if (restricted) {
+                        helpers.addResult(results, 0,
+                            'Machine Learning workspace has public network access disabled', location, workspace.id);
+                    } else {
+                        helpers.addResult(results, 2,
+                            'Machine Learning workspace has public network access enabled', location, workspace.id);
+                    }
                 }
             }
 

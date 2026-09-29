@@ -5,20 +5,44 @@ const accounts = [
     {
         "id": "/subscriptions/12424/resourceGroups/bvttest/providers/Microsoft.CognitiveServices/accounts/acc1",
         "name": "acc1",
+        "kind": "OpenAI",
         "type": "Microsoft.CognitiveServices/accounts",
         "location": "eastus",
-        "properties": {
-            "publicNetworkAccess": 'Disabled'
-        }
+        "publicNetworkAccess": 'Disabled'
       },
       {
         "id": "/subscriptions/12424/resourceGroups/bvttest/providers/Microsoft.CognitiveServices/accounts/acc2",
         "name": "acc2",
+        "kind": "OpenAI",
         "type": "Microsoft.CognitiveServices/accounts",
         "location": "eastus",
-        "properties": {
-            "publicNetworkAccess": 'Enabled'
+        "publicNetworkAccess": 'Enabled'
+      },
+      {
+        "id": "/subscriptions/12424/resourceGroups/bvttest/providers/Microsoft.CognitiveServices/accounts/acc4",
+        "name": "acc4",
+        "kind": "OpenAI",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "location": "eastus",
+        "publicNetworkAccess": 'Enabled',
+        "networkAcls": {
+            "defaultAction": "Deny",
+            "ipRules": [{"value": "192.168.1.0/24"}]
         }
+      },
+      {
+        "id": "/subscriptions/12424/resourceGroups/bvttest/providers/Microsoft.CognitiveServices/accounts/acc5",
+        "name": "acc5",
+        "kind": "OpenAI",
+        "type": "Microsoft.CognitiveServices/accounts",
+        "location": "eastus",
+        "publicNetworkAccess": 'Enabled',
+        "networkAcls": {
+            "defaultAction": "Deny",
+            "ipRules": [],
+            "virtualNetworkRules": []
+        },
+        "privateEndpointConnections": []
       },
     
    
@@ -84,6 +108,28 @@ describe('accountPublicAccessDisabled', function() {
 
         it('should give failing result if openai account is publicly accessible', function(done) {
             const cache = createCache([accounts[1]]);
+            accountPublicAccessDisabled.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(2);
+                expect(results[0].message).to.include('OpenAI Account is publicly accessible');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give passing result if openai account has selected networks with ip rules', function(done) {
+            const cache = createCache([accounts[2]]);
+            accountPublicAccessDisabled.run(cache, {}, (err, results) => {
+                expect(results.length).to.equal(1);
+                expect(results[0].status).to.equal(0);
+                expect(results[0].message).to.include('OpenAI Account is not publicly accessible');
+                expect(results[0].region).to.equal('eastus');
+                done();
+            });
+        });
+
+        it('should give failing result if openai account has selected networks but no rules configured', function(done) {
+            const cache = createCache([accounts[3]]);
             accountPublicAccessDisabled.run(cache, {}, (err, results) => {
                 expect(results.length).to.equal(1);
                 expect(results[0].status).to.equal(2);

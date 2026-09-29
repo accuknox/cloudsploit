@@ -48,6 +48,11 @@ module.exports = {
                 } else if (!blobContainers.data.length) {
                     helpers.addResult(results, 0, 'Storage Account does not contain blob containers', location, storageAccount.id);
                 } else {
+                    var accountLevelCMK =
+                        storageAccount.encryption &&
+                        storageAccount.encryption.keySource &&
+                        storageAccount.encryption.keySource.toLowerCase() === 'microsoft.keyvault';
+
                     const encryptionScopes = helpers.addSource(
                         cache, source, ['encryptionScopes', 'listByStorageAccounts', location, storageAccount.id]);
 
@@ -62,11 +67,12 @@ module.exports = {
                         }).map(function(scope) {
                             return scope.name;
                         });
+
                         blobContainers.data.forEach(function(blob) {
-                            if (!cmkEncryptionScopes.includes(blob.defaultEncryptionScope)) {
-                                helpers.addResult(results, 2, 'Blob container does not have CMK encryption enabled', location, blob.id);
-                            } else {
+                            if ((blob.defaultEncryptionScope && cmkEncryptionScopes.includes(blob.defaultEncryptionScope)) || accountLevelCMK) {
                                 helpers.addResult(results, 0, 'Blob container has CMK encryption enabled', location, blob.id);
+                            } else {
+                                helpers.addResult(results, 2, 'Blob container does not have CMK encryption enabled', location, blob.id);
                             }
                         });
                     }

@@ -38,7 +38,11 @@ module.exports = {
             for (let registry of registries.data){
                 if (!registry.id) continue;
 
-                if (registry.publicNetworkAccess && registry.publicNetworkAccess.toLowerCase() === 'enabled'){
+                const hasSelectedNetworks = registry.networkRuleSet &&
+                                        registry.networkRuleSet.defaultAction &&
+                                        registry.networkRuleSet.defaultAction.toLowerCase() === 'deny';
+
+                if (registry.publicNetworkAccess && registry.publicNetworkAccess.toLowerCase() === 'enabled' && !hasSelectedNetworks){
                     helpers.addResult(results, 2, 'Container registry is publicly accessible', location, registry.id);
                 } else {
                     helpers.addResult(results, 0, 'Container registry is not publicly accessible', location, registry.id);

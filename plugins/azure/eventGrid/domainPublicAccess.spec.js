@@ -21,6 +21,25 @@ const domains = [
       "location": "westus2",
       "name": "exampledomain1",
       "publicNetworkAccess": "Disabled"
+    },
+    {
+      "id": "/subscriptions/8f6b6269-84f2-4d09-9e31-1127efcd1e40/resourceGroups/examplerg/providers/Microsoft.EventGrid/domains/exampledomain1",
+      "location": "westus2",
+      "name": "exampledomain1",
+      "publicNetworkAccess": "Enabled",
+      "inboundIpRules": [
+          { "ipMask": "12.0.0.0", "action": "Allow" }
+      ]
+    },
+    {
+      "id": "/subscriptions/8f6b6269-84f2-4d09-9e31-1127efcd1e40/resourceGroups/examplerg/providers/Microsoft.EventGrid/domains/exampledomain1",
+      "location": "westus2",
+      "name": "exampledomain1",
+      "publicNetworkAccess": "Enabled",
+      "inboundIpRules": [
+          { "ipMask": "12.0.0.0", "action": "Allow" },
+          { "ipMask": "0.0.0.0", "action": "Allow" }
+      ]
     }
 ]
 const createCache = (data) => {
@@ -76,6 +95,28 @@ describe("domainPublicAccess", function () {
             expect(results.length).to.equal(1);
             expect(results[0].status).to.equal(0);
             expect(results[0].message).to.include("Event Grid domain does not have public network access enabled");
+            expect(results[0].region).to.equal("eastus");
+            done();
+        });
+    });
+
+    it("should give passing result if public access enabled but inbound IP rules are restricted", function (done) {
+        const cache = createCache([domains[2]]);
+        domainPublicAccess.run(cache, {}, (err, results) => {
+            expect(results.length).to.equal(1);
+            expect(results[0].status).to.equal(0);
+            expect(results[0].message).to.include("Event Grid domain does not have public network access enabled");
+            expect(results[0].region).to.equal("eastus");
+            done();
+        });
+    });
+
+    it("should give failing result if public access enabled and inbound IP rules contain open CIDR", function (done) {
+        const cache = createCache([domains[3]]);
+        domainPublicAccess.run(cache, {}, (err, results) => {
+            expect(results.length).to.equal(1);
+            expect(results[0].status).to.equal(2);
+            expect(results[0].message).to.include("Event Grid domain has public network access enabled");
             expect(results[0].region).to.equal("eastus");
             done();
         });
