@@ -1,6 +1,6 @@
 var helpers = require(__dirname + '/../../../helpers/aws');
 
-module.exports = function(AWSConfig, collection, retries, callback) {
+module.exports = function(AWSConfig, collection, retries, settings, scanAWSConfig, callback) {
     // Account-level call collected under us-east-1, but any regional s3-control
     // endpoint serves it, so a restricted scan sends it from a selected region.
     var s3control = helpers.createRegionalClient('S3Control', AWSConfig, helpers.allowedRegion(AWSConfig.region));

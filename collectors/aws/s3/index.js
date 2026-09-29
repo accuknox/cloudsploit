@@ -2,7 +2,7 @@ var async = require('async');
 var helpers = require(__dirname + '/../../../helpers/aws');
 var awsRegions = require(__dirname + '/../../../helpers/aws/regions.js');
 
-module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retries, callback) {
+module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retries, settings, scanAWSConfig, callback) {
     // Region allow-list (--regions); null means no restriction. S3 is collected
     // as a global service, so AWSConfig.region is us-east-1 - including for the
     // calls made only to find out where a bucket lives. Under a selection those
@@ -67,7 +67,7 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
     // The per-bucket call for unrestricted scans: try the home client and, when
     // the bucket turns out to live elsewhere, retry in its own region.
     function makeStandardCall(bucket, bcb) {
-        helpers.makeCustomCollectorCall(s3, callKey, {Bucket:bucket}, retries, null, null, null, function(bErr, bData) {
+        helpers.makeCustomCollectorCall(s3, callKey, {Bucket:bucket}, retries, null, null, null, settings, scanAWSConfig, AWSConfig, function(bErr, bData) {
             if (!bErr) {
                 results[bucket].data = bData;
                 return bcb();
@@ -85,7 +85,7 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
             if (bucketRegion && bucketRegion !== homeRegion) return callInRegion(bucket, bucketRegion, bcb);
 
             // It reported nothing, so ask where the bucket is and retry there.
-            helpers.makeCustomCollectorCall(s3, 'getBucketLocation', {Bucket:bucket}, retries, null, null, null, function(locErr, locData) {
+            helpers.makeCustomCollectorCall(s3, 'getBucketLocation', {Bucket:bucket}, retries, null, null, null, settings, scanAWSConfig, AWSConfig, function(locErr, locData) {
                 if (locErr || !locData || !locData.LocationConstraint) return bcb();
                 // Special case where location constraint is EU - rewrite as eu-west-1
                 if (locData.LocationConstraint == 'EU') locData.LocationConstraint = 'eu-west-1';
@@ -97,7 +97,7 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
 
     // Runs the call in the region the bucket actually lives in.
     function callInRegion(bucket, bucketRegion, bcb) {
-        helpers.makeCustomCollectorCall(clientFor(bucketRegion), callKey, {Bucket:bucket}, retries, null, null, null, function(err, data){
+        helpers.makeCustomCollectorCall(clientFor(bucketRegion), callKey, {Bucket:bucket}, retries, null, null, null, settings, scanAWSConfig, AWSConfig, function(err, data){
             if (err) {
                 results[bucket].err = err;
             } else {
@@ -116,7 +116,7 @@ module.exports = function(callKey, forceCloudTrail, AWSConfig, collection, retri
     function callAndLearnRegion(bucket, region, bcb) {
         var client = clientFor(region);
 
-        helpers.makeCustomCollectorCall(client, callKey, {Bucket:bucket}, retries, null, null, null, function(err, data) {
+        helpers.makeCustomCollectorCall(client, callKey, {Bucket:bucket}, retries, null, null, null, settings, scanAWSConfig, AWSConfig, function(err, data) {
             if (!err) {
                 // getBucketLocation is the exception: every region answers it,
                 // and the answer is the region itself. Trusting the call region
