@@ -84,7 +84,6 @@ module.exports = {
     workspaces: regions,
     xray: [],
     resourcegroupstaggingapi: regions,
-    codestar: regions,
     codebuild: regions,
     mq: regions,
     glacier: regions,

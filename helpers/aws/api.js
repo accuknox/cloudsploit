@@ -291,15 +291,6 @@ var serviceMap = {
             BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'CodePipeline',
             BridgeCollectionService: 'codepipeline', DataIdentifier: 'pipeline',
         },
-    'CodeStar':
-        {
-            enabled: true, isSingleSource: true, InvAsset: 'project', InvService: 'codeStar',
-            InvResourceCategory: 'cloud_resources', InvResourceType: 'codeStar_project',
-            BridgeServiceName: 'codestar', BridgePluginCategoryName: 'CodeStar', BridgeProvider: 'aws',
-            BridgeCall: 'describeProject', BridgeArnIdentifier: 'arn', BridgeIdTemplate: '', BridgeResourceType: 'project',
-            BridgeResourceNameIdentifier: 'name', BridgeExecutionService: 'CodeStar',
-            BridgeCollectionService: 'codestar', DataIdentifier: 'data',
-        },
     'Connect':
         {
             enabled: true, isSingleSource: true, InvAsset: 'instance', InvService: 'connect',
@@ -873,12 +864,6 @@ var calls = {
         },
         listRepositories: {
             property: 'repositories',
-            paginate: 'nextToken'
-        }
-    },
-    CodeStar: {
-        listProjects: {
-            property: 'projects',
             paginate: 'nextToken'
         }
     },
@@ -2399,14 +2384,6 @@ var postcalls = [
                 filterValue: 'ConfigRuleName'
             },
             sendIntegration: serviceMap['ConfigService']
-        },
-        CodeStar: {
-            describeProject: {
-                reliesOnService: 'codestar',
-                reliesOnCall: 'listProjects',
-                filterKey: 'id',
-                filterValue: 'projectId'
-            },
         },
         CustomerProfiles: {
             getDomain: {

@@ -83,6 +83,14 @@ parser.add_argument('--cloud', {
     choices: ['aws', 'azure', 'github', 'google', 'oracle','alibaba'],
     action: 'append'
 });
+parser.add_argument('--profile', {
+    help: 'Log time and memory for each scan stage, collector call and plugin as they finish, ' +
+        'and print a profile summary when the scan completes',
+    action: 'store_true'
+});
+parser.add_argument('--profile-output', {
+    help: 'Write the full profile as JSON to this file. Implies --profile'
+});
 parser.add_argument('--run-asl', {
     help: 'When set, it will execute custom plugins.',
     action: 'store_false'

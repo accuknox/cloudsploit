@@ -21,6 +21,7 @@ var async = require('async');
 var helpers = require(__dirname + '/../../helpers/aws');
 var collectors = require(__dirname + '/../../collectors/aws');
 var collectData = require(__dirname + '/../../helpers/shared.js');
+var reachability = require(__dirname + '/../../helpers/aws/reachability.js');
 var  proxy = require('proxy-agent');
 
 // Configure proxy from environment variables if exists
@@ -84,6 +85,8 @@ var collect = function(AWSConfig, settings, callback) {
     callsPart = settings.part - 1;
 
     let runApiCalls = [];
+
+    reachability.install(AWS);
 
     var AWSEC2 = new AWS.EC2(AWSConfig);
     var params = {AllRegions: true};

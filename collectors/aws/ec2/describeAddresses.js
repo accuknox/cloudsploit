@@ -1,6 +1,8 @@
+var AWS = require('aws-sdk');
 var async = require('async');
 var { EC2Client, DescribeAddressesCommand } = require('@aws-sdk/client-ec2');
 var helpers = require(__dirname + '/../../../helpers/aws');
+var reachability = require(__dirname + '/../../../helpers/aws/reachability.js');
 
 var rateError = { message: 'rate', statusCode: 429 };
 var apiRetryAttempts = 2;
@@ -12,7 +14,18 @@ module.exports = function(AWSConfig, collection, retries, settings, scanAWSConfi
     var ec2Client = new EC2Client(helpers.buildV3ClientConfig(AWSConfig));
     var params = {};
 
+    // The v3 client bypasses the aws-sdk v2 hook that checks endpoints, so
+    // check the same EC2 endpoint here before each attempt.
+    var endpointHost = new AWS.EC2(AWSConfig).endpoint.hostname;
+
     function runOnce(cb) {
+        reachability.check(endpointHost, function(unreachable) {
+            if (unreachable) return cb(unreachable, null);
+            send(cb);
+        });
+    }
+
+    function send(cb) {
         var command = new DescribeAddressesCommand(params);
         ec2Client.send(command).then(function(data) {
             return cb(null, data);

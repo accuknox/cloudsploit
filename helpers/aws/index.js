@@ -9,6 +9,14 @@ var govRegionsFedRampWest1  = require('./regions_gov_fedramp_west_1.js');
 var chinaRegions = require('./regions_china.js');
 var regionGuard = require('./regionGuard.js');
 
+var MAX_REGIONS_AT_A_TIME = 12;
+
+// libuv's thread pool (4 threads by default) runs every DNS lookup, and a scan
+// makes one for each AWS request, so size it to the regions collected at once.
+// Node reads this when the pool is first used; scans load these helpers before
+// doing any file or network I/O. An explicit UV_THREADPOOL_SIZE wins.
+if (!process.env.UV_THREADPOOL_SIZE) process.env.UV_THREADPOOL_SIZE = String(MAX_REGIONS_AT_A_TIME);
+
 // Meta keys (not per-service scan lists) that must never be narrowed by a
 // region allow-list: `default`/`all` are used for lookups and classification,
 // and `optin` classifies opt-in regions for status/messaging.
@@ -59,7 +67,7 @@ var helpers = {
     allowedRegion: regionGuard.allowedRegion,
     isWrongRegionError: regionGuard.isWrongRegionError,
     createRegionalClient: regionGuard.createClient,
-    MAX_REGIONS_AT_A_TIME: 6,
+    MAX_REGIONS_AT_A_TIME: MAX_REGIONS_AT_A_TIME,
     CLOUDSPLOIT_EVENTS_BUCKET: 'cloudsploit-engine-trails',
     CLOUDSPLOIT_EVENTS_SNS: 'aqua-cspm-sns-',
     ENCRYPTION_LEVELS: ['none', 'sse', 'awskms', 'awscmk', 'externalcmk', 'cloudhsm'],

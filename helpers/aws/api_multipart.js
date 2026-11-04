@@ -211,12 +211,6 @@ var calls = [
                 paginate: 'nextToken'
             }
         },
-        CodeStar: {
-            listProjects: {
-                property: 'projects',
-                paginate: 'nextToken'
-            }
-        },
         CodeBuild: {
             listProjects: {
                 property: 'projects',
@@ -1475,14 +1469,6 @@ var postcalls = [
                 reliesOnCall: 'describeConfigRules',
                 filterKey: 'ConfigRuleName',
                 filterValue: 'ConfigRuleName'
-            }
-        },
-        CodeStar: {
-            describeProject: {
-                reliesOnService: 'codestar',
-                reliesOnCall: 'listProjects',
-                filterKey: 'id',
-                filterValue: 'projectId'
             }
         },
         CustomerProfiles: {

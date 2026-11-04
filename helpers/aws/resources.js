@@ -101,10 +101,6 @@ module.exports = {
         listPipelines: 'arn:aws:codepipeline:{region}:{cloudAccount}:{name}',
         getPipeline: 'pipeline.roleArn',
     },
-    codestar: {
-        listProjects: 'projectArn',
-        describeProject: 'arn'
-    },
     cognitoidentityserviceprovider: {
         listUserPools: 'arn:aws:cognito-idp:{region}:{cloudAccount}:userpool/{Id}',
         describeUserPool: 'Arn',
