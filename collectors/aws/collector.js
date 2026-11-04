@@ -21,6 +21,8 @@ var async = require('async');
 var helpers = require(__dirname + '/../../helpers/aws');
 var collectors = require(__dirname + '/../../collectors/aws');
 var collectData = require(__dirname + '/../../helpers/shared.js');
+var profiler = require(__dirname + '/../../helpers/profiler.js');
+var reachability = require(__dirname + '/../../helpers/aws/reachability.js');
 var  proxy = require('proxy-agent');
 
 // Configure proxy from environment variables if exists
@@ -73,7 +75,12 @@ var collect = function(AWSConfig, settings, callback) {
     var params = {AllRegions: true};
     var excludeRegions = [];
 
+    profiler.instrumentAws(AWS);
+    reachability.install(AWS);
+    var describeRegionsStage = profiler.startStage('collect/describeRegions');
+
     AWSEC2.describeRegions(params, function(err, accountRegions) {
+        describeRegionsStage.end();
         if (err) {
             console.log(`[INFO][REGIONS] Could not load all regions from EC2: ${JSON.stringify(err)}`);
         } else {
@@ -85,6 +92,7 @@ var collect = function(AWSConfig, settings, callback) {
             }
         }
 
+        var callsStage = profiler.startStage('collect/calls');
         async.eachOfLimit(helpers.calls, 10, function(call, service, serviceCb) {
             var serviceName = service;
             var serviceLower = service.toLowerCase();
@@ -112,7 +120,11 @@ var collect = function(AWSConfig, settings, callback) {
                     callRegions = regions[serviceLower];
                 }
 
-                async.eachLimit(callRegions, helpers.MAX_REGIONS_AT_A_TIME, function(region, regionCb) {
+                var callProfile = profiler.collectorStart('call', serviceName, callKey, function() {
+                    return collection[serviceLower][callKey];
+                });
+
+                async.eachLimit(callRegions, helpers.MAX_REGIONS_AT_A_TIME, callProfile.timeRegion(function(region, regionCb) {
                     if (settings.skip_regions &&
                         settings.skip_regions.indexOf(region) > -1 &&
                         helpers.globalServices.indexOf(serviceName) === -1) return regionCb();
@@ -252,7 +264,8 @@ var collect = function(AWSConfig, settings, callback) {
                         }
                         execute();
                     }
-                }, function() {
+                }), function() {
+                    callProfile.end();
                     helpers.debugApiCalls(callKey, serviceName, debugMode);
                     callCb();
                 });
@@ -260,8 +273,13 @@ var collect = function(AWSConfig, settings, callback) {
                 return serviceCb();
             });
         }, function() {
+            callsStage.end();
+            var postcallLevel = 0;
+
             // Now loop through the follow up calls
             async.eachSeries(helpers.postcalls, function(postcallObj, postcallCb) {
+                var postcallPhase = 'postcall#' + (++postcallLevel);
+                var postcallStage = profiler.startStage('collect/' + postcallPhase);
                 async.eachOfLimit(postcallObj, 10, function(serviceObj, service, serviceCb) {
                     var serviceName = service;
                     var serviceLower = service.toLowerCase();
@@ -285,7 +303,11 @@ var collect = function(AWSConfig, settings, callback) {
 
                         helpers.debugApiCalls(callKey, serviceName, debugMode);
 
-                        async.eachLimit(regions[serviceLower], helpers.MAX_REGIONS_AT_A_TIME, function(region, regionCb) {
+                        var callProfile = profiler.collectorStart(postcallPhase, serviceName, callKey, function() {
+                            return collection[serviceLower][callKey];
+                        });
+
+                        async.eachLimit(regions[serviceLower], helpers.MAX_REGIONS_AT_A_TIME, callProfile.timeRegion(function(region, regionCb) {
                             if (settings.skip_regions &&
                                 settings.skip_regions.indexOf(region) > -1 &&
                                 helpers.globalServices.indexOf(serviceName) === -1) return regionCb();
@@ -405,7 +427,8 @@ var collect = function(AWSConfig, settings, callback) {
                                     regionCb();
                                 });
                             }
-                        }, function() {
+                        }), function() {
+                            callProfile.end();
                             helpers.debugApiCalls(callKey, serviceName, debugMode);
                             callCb();
                         });
@@ -430,10 +453,13 @@ var collect = function(AWSConfig, settings, callback) {
                         }
                     });
                 }, function() {
+                    postcallStage.end();
                     postcallCb();
                 });
             }, function() {
+                reachability.logSummary();
                 if (settings.identifier) {
+                    var integrationsStage = profiler.startStage('collect/integrations');
                     async.each(helpers.integrationSendLast, function(serv, cb) {
                         settings.identifier.service = serv.toLowerCase();
 
@@ -455,6 +481,7 @@ var collect = function(AWSConfig, settings, callback) {
                             cb();
                         }
                     }, function() {
+                        integrationsStage.end();
                         callback(null, collection, runApiCalls, errorSummary, errorTypeSummary, errors, retries);
                     });
 

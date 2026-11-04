@@ -1,3 +1,5 @@
+// Required first so that its clock starts before exports.js loads every plugin.
+var profiler = require('./helpers/profiler.js');
 var async = require('async');
 var exports = require('./exports.js');
 var suppress = require('./postprocess/suppress.js');
@@ -49,6 +51,9 @@ async function uploadResultsToBlob(resultsObject, storageConnection, blobContain
  * @param settings General purpose settings.
  */
 var engine = function(cloudConfig, settings) {
+    if (settings.profile || settings.profile_output) profiler.enable({output: settings.profile_output});
+    var setupStage = profiler.startStage('setup');
+
     // Initialize any suppression rules based on the the command line arguments
     var suppressionFilter = suppress.create(settings.suppress);
 
@@ -82,6 +87,7 @@ var engine = function(cloudConfig, settings) {
             }
         }
     }
+    setupStage.end();
 
     // Print customization options
     if (settings.compliance) console.log(`INFO: Using compliance modes: ${settings.compliance.join(', ')}`);
@@ -97,6 +103,7 @@ var engine = function(cloudConfig, settings) {
     }
 
     // STEP 1 - Obtain API calls to make
+    var planStage = profiler.startStage('plan');
     console.log('INFO: Determining API calls to make...');
 
     var skippedPlugins = [];
@@ -157,6 +164,7 @@ var engine = function(cloudConfig, settings) {
     });
 
     if (!apiCalls.length) return console.log('ERROR: Nothing to collect.');
+    planStage.end();
 
     console.log(`INFO: Found ${apiCalls.length} API calls to make for ${settings.cloud} plugins`);
     console.log('INFO: Collecting metadata. This may take several minutes...');
@@ -180,6 +188,7 @@ var engine = function(cloudConfig, settings) {
     };
 
     // STEP 2 - Collect API Metadata from Service Providers
+    var collectStage = profiler.startStage('collect');
     collector(cloudConfig, {
         api_calls: apiCalls,
         paginate: settings.skip_paginate,
@@ -187,8 +196,11 @@ var engine = function(cloudConfig, settings) {
         china: settings.china,
         regions: settings.regions
     }, function(err, collection) {
+        collectStage.end();
         if (err || !collection || !Object.keys(collection).length) return console.log(`ERROR: Unable to obtain API metadata: ${err || 'No data returned'}`);
+        var writeCollectionStage = profiler.startStage('writeCollection');
         outputHandler.writeCollection(collection, settings.cloud);
+        writeCollectionStage.end();
 
         console.log('INFO: Metadata collection complete. Analyzing...');
         console.log('INFO: Analysis complete. Scan report to follow...');
@@ -197,9 +209,12 @@ var engine = function(cloudConfig, settings) {
         var resultsObject = {};  // Initialize resultsObject for azure gov cloud
 
         function executePlugins(cloudRemediateConfig) {
+            var pluginsStage = profiler.startStage('plugins');
             async.mapValuesLimit(plugins, 10, function(plugin, key, pluginDone) {
                 if (skippedPlugins.indexOf(key) > -1) return pluginDone(null, 0);
+                var pluginProfile = profiler.pluginStart(key, plugin);
                 var postRun = function(err, results) {
+                    pluginProfile.end(err, results);
                     if (err) return console.log(`ERROR: ${err}`);
                     if (!results || !results.length) {
                         console.log(`Plugin ${plugin.title} returned no results. There may be a problem with this plugin.`);
@@ -285,11 +300,14 @@ var engine = function(cloudConfig, settings) {
                     plugin.run(collection, settings, postRun);
                 }
             }, function(err) {
+                pluginsStage.end();
                 if (err) return console.log(err);
 
+                var outputStage = profiler.startStage('output');
                 if (cloudConfig.StorageConnection && cloudConfig.BlobContainer) uploadResultsToBlob(resultsObject, cloudConfig.StorageConnection, cloudConfig.BlobContainer);
                 // console.log(JSON.stringify(collection, null, 2));
                 outputHandler.close();
+                outputStage.end();
                 if (settings.exit_code) {
                     // The original cloudsploit always has a 0 exit code. With this option, we can have
                     // the exit code depend on the results (useful for integration with CI systems)
@@ -297,6 +315,7 @@ var engine = function(cloudConfig, settings) {
                     process.exitCode = maximumStatus;
                 }
                 console.log('INFO: Scan complete');
+                profiler.report(collection);
             });
         }
         

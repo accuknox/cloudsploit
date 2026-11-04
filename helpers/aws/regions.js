@@ -35,7 +35,7 @@ var newRegionsUpdate =[
     'ca-west-1',      //Canada West (Calgary)
 ];
 
-module.exports = {
+var serviceRegions = {
     default: ['us-east-1'],
     // mx-central-1 appended as the per-service lists below do; without it,
     // getS3BucketLocation classifies buckets in that region as 'global'.
@@ -130,9 +130,6 @@ module.exports = {
         'ap-northeast-1', 'ap-southeast-2', 'ap-northeast-2', 'af-south-1', 'il-central-1'],
     servicequotas: [...regions, ...newRegionsUpdate, 'mx-central-1'],
     xray: [...regions, ...newRegionsUpdate, 'mx-central-1'],
-    codestar: ['us-east-1', 'us-east-2', 'us-west-1', 'us-west-2', 'ap-northeast-2',
-        'ap-southeast-1', 'ap-southeast-2', 'ap-northeast-1', 'ca-central-1', 'eu-central-1',
-        'eu-west-1', 'eu-west-2', 'eu-north-1'],
     codebuild: [...regions, 'ap-south-2', 'ap-southeast-4', 'eu-south-2', 'eu-central-2', 'il-central-1'],
     mq: [...regions, 'ap-south-2', 'ap-southeast-4', 'eu-south-2', 'eu-central-2', 'il-central-1', 'mx-central-1'],
     glacier: regions,
@@ -232,3 +229,22 @@ module.exports = {
         'eu-west-2', 'eu-west-3', 'sa-east-1']
 };
 
+// Middle East regions are left out of every scan. Their endpoints were
+// unreachable when this was added (Oct 2026): every me-south-1 endpoint and
+// several me-central-1 ones never accepted a connection, and each such call
+// held a scan up for about 20 minutes.
+//
+// 'all' and 'optin' describe AWS rather than what to scan and keep them:
+// getS3BucketLocation reads 'all', and a bucket whose region is missing from
+// it is reported as 'global'.
+var excludedRegions = ['me-south-1', 'me-central-1'];
+var descriptiveKeys = ['all', 'optin'];
+
+Object.keys(serviceRegions).forEach(function(service) {
+    if (!Array.isArray(serviceRegions[service]) || descriptiveKeys.indexOf(service) > -1) return;
+    serviceRegions[service] = serviceRegions[service].filter(function(region) {
+        return excludedRegions.indexOf(region) === -1;
+    });
+});
+
+module.exports = serviceRegions;
